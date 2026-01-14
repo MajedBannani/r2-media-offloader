@@ -8,34 +8,37 @@ Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Offload WordPress media to CF R2 with CDN rewriting, safe cleanup, restore, purge, and automatic WebP optimization.
+Offload WordPress media to Cloudflare R2 with CDN URL rewriting, safe cleanup, restore tools, and built-in WebP optimization.
 
 == Description ==
 
-Media Offloader for CF R2 is a production-grade solution to move WordPress media storage to CF R2 while keeping your site fast, safe, and fully reversible.
+Media Offloader for CF R2 is a production-ready solution for moving WordPress media storage to Cloudflare R2 while keeping your site fast, safe, and fully reversible.
 
-The plugin automatically offloads new uploads, rewrites URLs to your CDN, and provides powerful WP-CLI tools for managing existing media at scale.
+The plugin automatically offloads new media uploads to R2, rewrites media URLs to your CDN, and provides powerful WP-CLI commands for managing existing media at scale.
 
-It also includes built-in image optimization:
-– Automatic WebP conversion for new uploads  
-– Bulk WebP optimization for existing images  
+Built-in image optimization features include:
 
-All operations are designed with safety first: no broken links, no database corruption, and no irreversible actions.
+* Automatic WebP conversion for new uploads
+* Bulk WebP optimization for existing images
+
+All operations are designed with safety in mind. The plugin avoids broken links, prevents database corruption, and ensures that all destructive actions are explicitly triggered by the user.
 
 == Features ==
 
-* Automatic media offload to CF R2
-* CDN URL rewrite (runtime + persistent)
-* Bulk sync existing media to R2
-* Safe local media cleanup (disk space recovery)
+* Automatic media offload to Cloudflare R2
+* CDN URL rewriting (runtime and persistent)
+* Bulk synchronization of existing media to R2
+* Safe local media cleanup to recover disk space
 * Safe restore from R2 back to local storage
-* Full R2 bucket purge (with confirmation)
+* Full R2 bucket purge with confirmation
 * Automatic WebP conversion for new uploads
 * Bulk WebP optimization for existing images
 * WP-CLI commands for all heavy operations
-* No vendor lock-in – fully reversible
+* No vendor lock-in – fully reversible at any time
 
 == WP-CLI Commands ==
+
+The plugin provides WP-CLI commands for advanced and large-scale operations:
 
 * `wp r2 sync-existing`
 * `wp r2 delete-local`
@@ -45,24 +48,24 @@ All operations are designed with safety first: no broken links, no database corr
 
 == Installation ==
 
-1. Upload the plugin to `/wp-content/plugins/`
-2. Activate the plugin
-3. Go to Settings → CF R2
-4. Enter your CF R2 credentials
-5. (Optional) Run WP-CLI commands for bulk operations
+1. Upload the plugin to the `/wp-content/plugins/` directory.
+2. Activate the plugin through the WordPress admin panel.
+3. Go to Settings → CF R2.
+4. Enter your Cloudflare R2 credentials.
+5. (Optional) Use WP-CLI commands for bulk operations.
 
 == Frequently Asked Questions ==
 
-= Is this plugin safe for production? =
-Yes. All destructive actions require explicit confirmation and safety checks.
+= Is this plugin safe for production use? =
+Yes. All destructive actions require explicit user confirmation and multiple safety checks.
 
-= Can I restore media back locally? =
-Yes. Files can be restored from R2 without database changes.
+= Can I restore media files back to local storage? =
+Yes. Media files can be restored from Cloudflare R2 without modifying database URLs.
 
-= Does the plugin delete originals? =
-Only if the user explicitly runs the safe cleanup command.
+= Does the plugin delete original files automatically? =
+No. Local files are only removed if the user explicitly runs the safe cleanup command.
 
 == Changelog ==
 
 = 1.0.0 =
-* Initial release
+* Initial public release
