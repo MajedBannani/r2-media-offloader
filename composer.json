@@ -1,0 +1,23 @@
+{
+  "name": "r2mo/media-offloader-for-cf-r2",
+  "description": "WordPress plugin foundation for offloading media to CF R2.",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": ">=8.0 <8.4",
+    "aws/aws-sdk-php": ">=3.0 <3.300"
+  },
+  "autoload": {
+    "psr-4": {
+      "R2MO\\": "includes/"
+    }
+  },
+  "config": {
+    "sort-packages": true,
+    "platform": {
+      "php": "8.0.0"
+    }
+  }
+}
+
+

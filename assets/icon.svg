@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Background circle -->
+  <circle cx="128" cy="128" r="120" fill="#F38020" opacity="0.1"/>
+  
+  <!-- Cloud shape (representing Cloudflare R2) -->
+  <path d="M 128 60 Q 100 60 85 80 Q 70 75 60 85 Q 50 70 35 75 Q 30 90 40 100 Q 25 110 30 130 Q 45 125 55 135 Q 50 150 65 155 Q 80 145 95 150 Q 100 135 115 140 Q 130 125 145 130 Q 150 115 165 120 Q 180 110 195 115 Q 200 100 210 110 Q 225 105 230 120 Q 240 125 245 140 Q 230 145 220 155 Q 210 170 195 165 Q 180 175 165 170 Q 150 185 135 180 Q 120 195 105 190 Q 90 200 75 195 Q 60 210 45 205 Q 30 195 20 180 Q 10 165 20 150 Q 5 135 15 120 Q 0 105 10 90 Q 20 75 35 80 Q 50 70 60 85 Q 70 75 85 80 Q 100 60 128 60 Z" 
+        fill="#F38020" opacity="0.3"/>
+  
+  <!-- Simplified cloud icon -->
+  <path d="M 100 100 Q 80 100 70 115 Q 60 110 55 120 Q 50 110 40 115 Q 35 125 40 135 Q 30 140 35 150 Q 50 145 60 155 Q 70 150 80 155 Q 90 145 100 150 Q 110 140 120 145 Q 130 135 140 140 Q 150 130 160 135 Q 170 125 180 130 Q 190 120 200 125 Q 210 115 220 120 Q 230 110 235 120 Q 240 130 235 140 Q 225 145 220 155 Q 210 160 200 155 Q 190 165 180 160 Q 170 170 160 165 Q 150 175 140 170 Q 130 180 120 175 Q 110 185 100 180 Q 90 190 80 185 Q 70 195 60 190 Q 50 180 45 170 Q 40 160 45 150 Q 35 140 40 130 Q 30 120 35 110 Q 40 100 50 105 Q 60 95 70 100 Q 80 90 90 95 Q 100 85 110 90 Q 100 100 100 100 Z" 
+        fill="#F38020"/>
+  
+  <!-- Arrow pointing right (representing offload/upload) -->
+  <path d="M 140 128 L 160 128 M 155 123 L 160 128 L 155 133" 
+        stroke="#FFFFFF" 
+        stroke-width="4" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" 
+        fill="none"/>
+  
+  <!-- Storage/disk icon (representing media storage) -->
+  <circle cx="180" cy="128" r="20" fill="#FFFFFF" opacity="0.9"/>
+  <circle cx="180" cy="128" r="12" fill="#F38020"/>
+  <circle cx="180" cy="128" r="6" fill="#FFFFFF"/>
+</svg>

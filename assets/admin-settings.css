@@ -1,0 +1,50 @@
+/**
+ * Admin settings page styles.
+ *
+ * @package R2MO
+ */
+
+/* Save Changes button spacing */
+.r2mo-settings-form {
+	margin-block-end: 20px;
+}
+
+/* Action buttons container */
+.r2mo-actions-group {
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	padding-block: 20px;
+	padding-inline: 20px;
+	margin-block-start: 30px;
+}
+
+/* Section separation for actions group */
+.r2mo-actions-group.r2mo-section-separator {
+	border-block-start: 1px solid #dcdcde;
+	padding-block-start: 30px;
+}
+
+/* Individual action button forms */
+.r2mo-action-form {
+	margin-block-start: 10px;
+}
+
+.r2mo-action-form:first-child {
+	margin-block-start: 0;
+}
+
+/* Danger Zone section */
+.r2mo-danger-zone {
+	border-block-start: 1px solid #dcdcde;
+	margin-block-start: 40px;
+	padding-block-start: 30px;
+}
+
+.r2mo-danger-zone h2 {
+	margin-block-start: 0;
+}
+
+.r2mo-danger-zone .description {
+	margin-block-end: 20px;
+}

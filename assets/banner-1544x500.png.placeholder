@@ -1,0 +1,9 @@
+PLACEHOLDER FILE
+
+This file should be replaced with:
+- File name: banner-1544x500.png
+- Format: PNG (24-bit RGB)
+- Dimensions: Exactly 1544x500 pixels (2x resolution for high-DPI displays)
+- Content: Plugin banner design following guidelines in BANNER_README.md
+
+See docs/ASSETS.md for complete documentation.
