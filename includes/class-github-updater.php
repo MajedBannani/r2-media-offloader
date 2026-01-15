@@ -57,10 +57,14 @@ final class GitHub_Updater {
 	/**
 	 * Inject update information into WordPress update transient.
 	 *
-	 * @param object $transient Update transient.
-	 * @return object
+	 * @param object|false $transient Update transient.
+	 * @return object|false
 	 */
-	public function filter_update_transient(object $transient): object {
+	public function filter_update_transient(object|false $transient): object|false {
+		if (! is_object($transient)) {
+			return $transient;
+		}
+
 		if (! isset($transient->checked[$this->plugin_file])) {
 			return $transient;
 		}
