@@ -48,3 +48,25 @@
 .r2mo-danger-zone .description {
 	margin-block-end: 20px;
 }
+
+/* Support box */
+.r2mo-support-box {
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	margin-block-start: 32px;
+	padding-block: 28px;
+	padding-inline: 28px;
+	text-align: center;
+}
+
+.r2mo-support-button {
+	display: inline-block;
+	margin-block-start: 12px;
+}
+
+.r2mo-support-footer {
+	color: #646970;
+	font-size: 12px;
+	margin-block-start: 12px;
+}

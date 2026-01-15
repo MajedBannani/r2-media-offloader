@@ -321,6 +321,13 @@ final class Settings_Page {
 		echo '</form>';
 		echo '</div>';
 
+		echo '<div class="r2mo-support-box">';
+		echo '<h2>' . esc_html__('Support This Plugin', 'media-offloader-for-cf-r2') . '</h2>';
+		echo '<p>' . esc_html__('This plugin is completely free. If it has been helpful, you\'re welcome to support its ongoing maintenance and improvements.', 'media-offloader-for-cf-r2') . '</p>';
+		echo '<a class="button button-secondary r2mo-support-button" href="' . esc_url('https://example.com/support') . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Support Development', 'media-offloader-for-cf-r2') . '</a>';
+		echo '<p class="r2mo-support-footer">' . esc_html__('Created by Majed Talal', 'media-offloader-for-cf-r2') . '</p>';
+		echo '</div>';
+
 		echo '</div>';
 	}
 
