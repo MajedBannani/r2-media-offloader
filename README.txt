@@ -4,7 +4,7 @@ Tags: cloudflare, r2, media offload, cdn, webp
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 1.0.0
+Stable tag: 1.0.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -67,5 +67,6 @@ No. Local files are only removed if the user explicitly runs the safe cleanup co
 
 == Changelog ==
 
-= 1.0.0 =
-* Initial public release
+= 1.0.4 =
+* UI polish and admin UX improvements
+* Safe SDK bundling and activation fallback

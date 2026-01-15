@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Media Offloader for CF R2
  * Description:       Foundation plugin for offloading WordPress media to CF R2 (S3-compatible storage).
- * Version:           1.0.0
+ * Version:           1.0.4
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Majed Talal
@@ -19,7 +19,7 @@ if (! defined('ABSPATH')) {
 	exit;
 }
 
-define('R2MO_VERSION', '1.0.0');
+define('R2MO_VERSION', '1.0.4');
 define('R2MO_PATH', plugin_dir_path(__FILE__));
 define('R2MO_URL', plugin_dir_url(__FILE__));
 
@@ -43,6 +43,46 @@ add_action(
 	static function (): void {
 		\R2MO\Plugin::init();
 	}
+);
+
+add_filter(
+	'plugin_row_meta',
+	static function (array $links, string $file): array {
+		if ($file !== plugin_basename(__FILE__)) {
+			return $links;
+		}
+
+		$row_links = [
+			'github' => [
+				'label' => __('GitHub', 'media-offloader-for-cf-r2'),
+				'url'   => 'https://github.com/MajedBannani',
+			],
+			'repository' => [
+				'label' => __('View Plugin Repository', 'media-offloader-for-cf-r2'),
+				'url'   => 'https://github.com/MajedBannani/r2-media-offloader',
+			],
+			'release' => [
+				'label' => __('Latest Release', 'media-offloader-for-cf-r2'),
+				'url'   => 'https://github.com/MajedBannani/r2-media-offloader/releases',
+			],
+			'website' => [
+				'label' => __('Plugin Website', 'media-offloader-for-cf-r2'),
+				'url'   => 'https://majedtalal.com',
+			],
+		];
+
+		foreach ($row_links as $row_link) {
+			$links[] = sprintf(
+				'<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
+				esc_url($row_link['url']),
+				esc_html($row_link['label'])
+			);
+		}
+
+		return $links;
+	},
+	10,
+	2
 );
 
 
