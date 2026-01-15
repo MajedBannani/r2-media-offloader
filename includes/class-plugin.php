@@ -99,9 +99,7 @@ final class Plugin {
 			return;
 		}
 
-		echo '<div class="notice notice-info is-dismissible"><p>' .
-			esc_html__('Always install updates via the WordPress dashboard or the official release ZIP. GitHub source downloads are not supported.', 'media-offloader-for-cf-r2') .
-			'</p></div>';
+		return;
 	}
 
 	/**
