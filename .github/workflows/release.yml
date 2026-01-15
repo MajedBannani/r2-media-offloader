@@ -17,6 +17,8 @@ jobs:
         with:
           fetch-depth: 0
 
+      # WordPress requires the extracted folder name to match the installed plugin slug exactly.
+      # We build a clean ZIP to prevent -main / -vX / hash-based folders that cause deactivation.
       - name: Build plugin ZIP
         env:
           PLUGIN_SLUG: r2-media-offloader
@@ -47,6 +49,7 @@ jobs:
           cd "${BUILD_DIR}"
           zip -r "${PLUGIN_SLUG}.zip" "${PLUGIN_SLUG}"
 
+      # Fail fast if the ZIP structure isn't WordPress-compatible.
       - name: Validate ZIP structure
         env:
           PLUGIN_SLUG: r2-media-offloader
