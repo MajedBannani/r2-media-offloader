@@ -20,9 +20,29 @@ if (! defined('ABSPATH')) {
 	exit;
 }
 
-define('R2MO_VERSION', '1.0.4');
+define('R2MO_VERSION', '1.0.12');
 define('R2MO_PATH', plugin_dir_path(__FILE__));
 define('R2MO_URL', plugin_dir_url(__FILE__));
+define('R2MO_PLUGIN_SLUG', 'r2-media-offloader');
+
+register_activation_hook(
+	__FILE__,
+	static function (): void {
+		$expected = R2MO_PLUGIN_SLUG;
+		$actual   = basename(plugin_dir_path(__FILE__));
+
+		if ($actual !== $expected) {
+			deactivate_plugins(plugin_basename(__FILE__));
+			wp_die(
+				esc_html__('This plugin package is invalid. Please install the official release ZIP.', 'media-offloader-for-cf-r2'),
+				esc_html__('Invalid Plugin Package', 'media-offloader-for-cf-r2'),
+				[
+					'back_link' => true,
+				]
+			);
+		}
+	}
+);
 
 // Load SDK autoloader if bundled. Avoid hard dependency on vendor/ for WP.org.
 $autoload_candidates = [

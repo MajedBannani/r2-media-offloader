@@ -18,8 +18,10 @@ final class GitHub_Updater {
 	private const REPO_URL = 'https://github.com/MajedBannani/r2-media-offloader';
 	private const CACHE_KEY = 'r2mo_github_release';
 	private const CACHE_TTL = 6 * HOUR_IN_SECONDS;
-	private const ASSET_NAME = 'media-offloader-for-cf-r2.zip';
-	private const EXPECTED_SLUG = 'media-offloader-for-cf-r2';
+	private const ASSET_NAME = 'r2-media-offloader.zip';
+	private const EXPECTED_SLUG = 'r2-media-offloader';
+	private const MAIN_FILE = 'r2-media-offloader.php';
+	private const NOTICE_KEY = 'r2mo_github_release_notice';
 
 	/**
 	 * Plugin basename (directory/file.php).
@@ -54,6 +56,8 @@ final class GitHub_Updater {
 		add_filter('plugins_api', [$instance, 'filter_plugins_api'], 10, 3);
 		add_filter('upgrader_pre_download', [$instance, 'filter_pre_download'], 10, 3);
 		add_filter('upgrader_source_selection', [$instance, 'filter_source_selection'], 10, 4);
+		add_filter('upgrader_post_install', [$instance, 'filter_post_install'], 10, 3);
+		add_action('admin_notices', [$instance, 'render_admin_notice']);
 	}
 
 	/**
@@ -201,7 +205,59 @@ final class GitHub_Updater {
 			);
 		}
 
+		$main_file = trailingslashit($source) . self::MAIN_FILE;
+		if (! file_exists($main_file)) {
+			return new \WP_Error(
+				'r2mo_github_missing_main_file',
+				__('Update package is missing the main plugin file. Update aborted.', 'media-offloader-for-cf-r2')
+			);
+		}
+
 		return $source;
+	}
+
+	/**
+	 * Validate installed plugin after update and abort on mismatch.
+	 *
+	 * @param mixed               $response  Install response.
+	 * @param array<string,mixed> $hook_extra Hook extra arguments.
+	 * @param array<string,mixed> $result    Install result.
+	 * @return mixed
+	 */
+	public function filter_post_install($response, array $hook_extra, array $result) {
+		if (is_wp_error($response)) {
+			return $response;
+		}
+
+		if (! isset($hook_extra['plugin']) || $hook_extra['plugin'] !== $this->plugin_file) {
+			return $response;
+		}
+
+		$destination = isset($result['destination']) ? (string) $result['destination'] : '';
+		if ($destination === '') {
+			return new \WP_Error(
+				'r2mo_github_invalid_destination',
+				__('Update destination is invalid. Update aborted.', 'media-offloader-for-cf-r2')
+			);
+		}
+
+		$folder = basename(wp_normalize_path(untrailingslashit($destination)));
+		if ($folder !== self::EXPECTED_SLUG) {
+			return new \WP_Error(
+				'r2mo_github_post_folder_mismatch',
+				__('Update installed into an invalid folder. Update aborted to prevent plugin deactivation.', 'media-offloader-for-cf-r2')
+			);
+		}
+
+		$main_file = trailingslashit($destination) . self::MAIN_FILE;
+		if (! file_exists($main_file)) {
+			return new \WP_Error(
+				'r2mo_github_post_missing_main_file',
+				__('Update is missing the main plugin file. Update aborted.', 'media-offloader-for-cf-r2')
+			);
+		}
+
+		return $response;
 	}
 
 	/**
@@ -251,6 +307,9 @@ final class GitHub_Updater {
 		$assets  = isset($data['assets']) && is_array($data['assets']) ? $data['assets'] : [];
 		$package = $this->find_release_asset_url($assets);
 		if ($package === '') {
+			$this->set_notice(
+				__('Official release ZIP asset not found on GitHub. Updates are temporarily unavailable.', 'media-offloader-for-cf-r2')
+			);
 			return null;
 		}
 
@@ -292,6 +351,33 @@ final class GitHub_Updater {
 		}
 
 		return '';
+	}
+
+	/**
+	 * Store a short-lived admin notice message.
+	 *
+	 * @param string $message Notice message.
+	 */
+	private function set_notice(string $message): void {
+		set_transient(self::NOTICE_KEY, $message, 6 * HOUR_IN_SECONDS);
+	}
+
+	/**
+	 * Render admin notice for updater issues.
+	 */
+	public function render_admin_notice(): void {
+		if (! current_user_can('update_plugins')) {
+			return;
+		}
+
+		$message = get_transient(self::NOTICE_KEY);
+		if (! is_string($message) || $message === '') {
+			return;
+		}
+
+		delete_transient(self::NOTICE_KEY);
+
+		echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html($message) . '</p></div>';
 	}
 
 	/**
