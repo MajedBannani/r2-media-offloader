@@ -537,10 +537,10 @@ final class Settings_Page {
 	}
 
 	/**
-	 * Check whether the current locale is Arabic.
+	 * Check whether the current admin user locale is Arabic.
 	 */
 	private static function is_arabic_locale(): bool {
-		$locale = function_exists('get_locale') ? (string) get_locale() : '';
+		$locale = function_exists('get_user_locale') ? (string) get_user_locale() : '';
 		return str_starts_with($locale, 'ar');
 	}
 
@@ -552,28 +552,28 @@ final class Settings_Page {
 
 		$descriptions = [
 			'account_id'  => [
-				'en' => 'Your Cloudflare account identifier. Required to authenticate requests to your R2 storage.',
-				'ar' => 'معرّف حسابك في Cloudflare. مطلوب لإنشاء اتصال مع خدمة R2.',
+				'en' => __('Your Cloudflare account identifier. Required to authenticate requests to your R2 storage.', 'media-offloader-for-cf-r2'),
+				'ar' => __('معرّف حسابك في Cloudflare. مطلوب لإنشاء اتصال مع خدمة R2.', 'media-offloader-for-cf-r2'),
 			],
 			'access_key'  => [
-				'en' => 'Public access key used to authenticate with your R2 bucket.',
-				'ar' => 'مفتاح الوصول العام المستخدم للاتصال بـ R2.',
+				'en' => __('Public access key used to authenticate with your R2 bucket.', 'media-offloader-for-cf-r2'),
+				'ar' => __('مفتاح الوصول العام المستخدم للاتصال بـ R2.', 'media-offloader-for-cf-r2'),
 			],
 			'secret_key'  => [
-				'en' => 'Secret key used together with the Access Key to sign requests. Keep this private.',
-				'ar' => 'المفتاح السري المستخدم مع Access Key. يجب عدم مشاركته.',
+				'en' => __('Secret key used together with the Access Key to sign requests. Keep this private.', 'media-offloader-for-cf-r2'),
+				'ar' => __('المفتاح السري المستخدم مع Access Key. يجب عدم مشاركته.', 'media-offloader-for-cf-r2'),
 			],
 			'bucket'      => [
-				'en' => 'The name of the R2 bucket where media files will be stored.',
-				'ar' => 'اسم الـ Bucket الذي سيتم حفظ ملفات الوسائط فيه.',
+				'en' => __('The name of the R2 bucket where media files will be stored.', 'media-offloader-for-cf-r2'),
+				'ar' => __('اسم الـ Bucket الذي سيتم حفظ ملفات الوسائط فيه.', 'media-offloader-for-cf-r2'),
 			],
 			'public_url'  => [
-				'en' => 'Public CDN URL used to serve media files from R2.',
-				'ar' => 'رابط CDN العام المستخدم لعرض الملفات من R2.',
+				'en' => __('Public CDN URL used to serve media files from R2.', 'media-offloader-for-cf-r2'),
+				'ar' => __('رابط CDN العام المستخدم لعرض الملفات من R2.', 'media-offloader-for-cf-r2'),
 			],
 			'path_prefix' => [
-				'en' => 'Optional folder path inside the bucket to organize uploads. Leave empty if not needed.',
-				'ar' => 'مسار اختياري داخل الـ Bucket لتنظيم الملفات. اتركه فارغًا إذا لم يكن مطلوبًا.',
+				'en' => __('Optional folder path inside the bucket to organize uploads. Leave empty if not needed.', 'media-offloader-for-cf-r2'),
+				'ar' => __('مسار اختياري داخل الـ Bucket لتنظيم الملفات. اتركه فارغًا إذا لم يكن مطلوبًا.', 'media-offloader-for-cf-r2'),
 			],
 		];
 
@@ -592,28 +592,28 @@ final class Settings_Page {
 
 		$descriptions = [
 			'r2mo_test_connection' => [
-				'en' => 'Verifies that the provided credentials can connect to Cloudflare R2 without modifying any data.',
-				'ar' => 'يتحقق من صحة بيانات الاتصال دون رفع أو حذف أي ملفات.',
+				'en' => __('Verifies that the provided credentials can connect to Cloudflare R2 without modifying any data.', 'media-offloader-for-cf-r2'),
+				'ar' => __('يتحقق من صحة بيانات الاتصال دون رفع أو حذف أي ملفات.', 'media-offloader-for-cf-r2'),
 			],
 			'r2mo_sync_existing'   => [
-				'en' => 'Uploads all existing media files to Cloudflare R2. Local files are not deleted.',
-				'ar' => 'يرفع جميع ملفات الوسائط الحالية إلى R2 دون حذف النسخ المحلية.',
+				'en' => __('Uploads all existing media files to Cloudflare R2. Local files are not deleted.', 'media-offloader-for-cf-r2'),
+				'ar' => __('يرفع جميع ملفات الوسائط الحالية إلى R2 دون حذف النسخ المحلية.', 'media-offloader-for-cf-r2'),
 			],
 			'r2mo_delete_local'    => [
-				'en' => 'Safely removes local media files after confirming they exist on R2.',
-				'ar' => 'يحذف الملفات المحلية فقط بعد التأكد من وجودها على R2.',
+				'en' => __('Safely removes local media files after confirming they exist on R2.', 'media-offloader-for-cf-r2'),
+				'ar' => __('يحذف الملفات المحلية فقط بعد التأكد من وجودها على R2.', 'media-offloader-for-cf-r2'),
 			],
 			'r2mo_restore_local'   => [
-				'en' => 'Restores missing local media files from Cloudflare R2 back to the server.',
-				'ar' => 'يعيد تحميل الملفات من R2 إلى السيرفر المحلي.',
+				'en' => __('Restores missing local media files from Cloudflare R2 back to the server.', 'media-offloader-for-cf-r2'),
+				'ar' => __('يعيد تحميل الملفات من R2 إلى السيرفر المحلي.', 'media-offloader-for-cf-r2'),
 			],
 			'r2mo_optimize_webp'   => [
-				'en' => 'Optimizes existing JPG and PNG images by generating WebP versions.',
-				'ar' => 'يحسّن الصور الحالية (JPG و PNG) عن طريق إنشاء نسخ WebP.',
+				'en' => __('Optimizes existing JPG and PNG images by generating WebP versions.', 'media-offloader-for-cf-r2'),
+				'ar' => __('يحسّن الصور الحالية (JPG و PNG) عن طريق إنشاء نسخ WebP.', 'media-offloader-for-cf-r2'),
 			],
 			'r2mo_purge_bucket'    => [
-				'en' => 'Deletes all objects from the R2 bucket. This action is irreversible.',
-				'ar' => 'يحذف جميع الملفات داخل الـ Bucket. هذا الإجراء لا يمكن التراجع عنه.',
+				'en' => __('Deletes all objects from the R2 bucket. This action is irreversible.', 'media-offloader-for-cf-r2'),
+				'ar' => __('يحذف جميع الملفات داخل الـ Bucket. هذا الإجراء لا يمكن التراجع عنه.', 'media-offloader-for-cf-r2'),
 			],
 		];
 

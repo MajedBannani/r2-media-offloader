@@ -16,23 +16,30 @@
 
 /* Settings form container */
 .media-offloader-settings .r2mo-settings-form {
+	background: #ffffff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	padding-block: 20px;
+	padding-inline: 24px;
 	margin-block-end: 24px;
 }
 
 .media-offloader-settings .r2mo-settings-form .form-table {
-	background: #ffffff;
-	border: 1px solid #dcdcde;
-	border-radius: 8px;
-	padding-block: 12px;
-	padding-inline: 16px;
-	margin-block-start: 12px;
+	margin-block-start: 0;
+	margin-block-end: 12px;
 }
 
 .media-offloader-settings .r2mo-settings-form .form-table th,
 .media-offloader-settings .r2mo-settings-form .form-table td {
-	padding-block: 12px;
+	padding-block: 16px;
 	padding-inline: 0;
 	text-align: start;
+	vertical-align: top;
+}
+
+.media-offloader-settings .r2mo-settings-form .form-table th label {
+	display: inline-block;
+	margin-block-end: 4px;
 }
 
 .media-offloader-settings .r2mo-settings-form input.regular-text {
@@ -40,6 +47,7 @@
 	border-radius: 4px;
 	padding-block: 6px;
 	padding-inline: 8px;
+	min-height: 36px;
 }
 
 .media-offloader-settings .r2mo-settings-form input.regular-text:focus {
@@ -52,6 +60,10 @@
 	font-size: 12px;
 	margin-block-start: 6px;
 	max-width: 560px;
+}
+
+.media-offloader-settings .r2mo-settings-form .description {
+	margin-block-start: 8px;
 }
 
 /* Action buttons container */
@@ -72,7 +84,7 @@
 
 /* Individual action button forms */
 .media-offloader-settings .r2mo-action-form {
-	margin-block-start: 12px;
+	margin-block-start: 10px;
 }
 
 .media-offloader-settings .r2mo-action-form:first-child {
@@ -86,9 +98,11 @@
 
 /* Danger Zone section */
 .media-offloader-settings .r2mo-danger-zone {
-	border-block-start: 1px solid #dcdcde;
-	margin-block-start: 36px;
-	padding-block-start: 24px;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	margin-block-start: 32px;
+	padding-block: 20px;
+	padding-inline: 24px;
 }
 
 .media-offloader-settings .r2mo-danger-zone h2 {
