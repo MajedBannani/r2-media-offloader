@@ -9,9 +9,6 @@ declare(strict_types=1);
 
 namespace R2MO;
 
-use Aws\Exception\AwsException;
-use Aws\S3\S3Client;
-
 if (! defined('ABSPATH')) {
 	exit;
 }
@@ -27,9 +24,9 @@ final class R2_Client {
 	/**
 	 * Underlying AWS S3 client instance.
 	 *
-	 * @var S3Client|null
+	 * @var object|null
 	 */
-	private ?S3Client $client = null;
+	private $client = null;
 
 	/**
 	 * Get singleton instance.
@@ -50,10 +47,14 @@ final class R2_Client {
 	 * configured with the appropriate endpoint and region.
 	 *
 	 * @since 1.0.0
-	 * @return S3Client AWS SDK S3Client instance configured for CF R2.
+	 * @return object AWS SDK S3Client instance configured for CF R2.
 	 */
-	public function client(): S3Client {
-		if ($this->client instanceof S3Client) {
+	public function client() {
+		if (! r2mo_is_sdk_available()) {
+			throw new \RuntimeException(r2mo_sdk_missing_message());
+		}
+
+		if ($this->client instanceof \Aws\S3\S3Client) {
 			return $this->client;
 		}
 
@@ -63,7 +64,7 @@ final class R2_Client {
 
 		$endpoint = sprintf('https://%s.r2.cloudflarestorage.com', $account_id);
 
-		$client = new S3Client(
+		$client = new \Aws\S3\S3Client(
 			[
 				'version'                 => 'latest',
 				'region'                  => 'auto',
@@ -107,16 +108,8 @@ final class R2_Client {
 		try {
 			$this->client()->headBucket(['Bucket' => $bucket]);
 			return true;
-		} catch (AwsException $e) {
-			$message = $e->getAwsErrorMessage();
-			if (! is_string($message) || $message === '') {
-				$message = $e->getMessage();
-			}
-
-			return $message !== '' ? $message : __('Unknown error while testing R2 connection.', 'media-offloader-for-cf-r2');
 		} catch (\Throwable $e) {
-			$message = $e->getMessage();
-			return $message !== '' ? $message : __('Unknown error while testing R2 connection.', 'media-offloader-for-cf-r2');
+			return r2mo_get_aws_error_message($e);
 		}
 	}
 

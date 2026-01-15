@@ -9,8 +9,6 @@ declare(strict_types=1);
 
 namespace R2MO;
 
-use Aws\Exception\AwsException;
-
 if (! defined('ABSPATH')) {
 	exit;
 }
@@ -82,6 +80,14 @@ function r2mo_optimize_attachment_to_webp(int $attachment_id): array {
 			return [
 				'status'   => 'failed',
 				'message'  => 'R2 not configured.',
+				'webp_key' => '',
+			];
+		}
+
+		if (! r2mo_is_sdk_available()) {
+			return [
+				'status'   => 'failed',
+				'message'  => r2mo_sdk_missing_message(),
 				'webp_key' => '',
 			];
 		}
@@ -247,19 +253,11 @@ function r2mo_optimize_attachment_to_webp(int $attachment_id): array {
 				'message'  => 'Successfully optimized and uploaded to R2.',
 				'webp_key' => $key,
 			];
-		} catch (AwsException $e) {
-			wp_delete_file($final_webp_path);
-			$msg = $e->getAwsErrorMessage() ?: $e->getMessage();
-			return [
-				'status'   => 'failed',
-				'message'  => 'R2 upload failed: ' . $msg,
-				'webp_key' => '',
-			];
 		} catch (\Throwable $e) {
 			wp_delete_file($final_webp_path);
 			return [
 				'status'   => 'failed',
-				'message'  => 'Unexpected error: ' . $e->getMessage(),
+				'message'  => 'R2 upload failed: ' . r2mo_get_aws_error_message($e),
 				'webp_key' => '',
 			];
 		}

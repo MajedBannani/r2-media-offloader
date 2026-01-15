@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace R2MO;
 
-use Aws\Exception\AwsException;
 use R2MO\Services\Url_Rewriter;
 
 if (! defined('ABSPATH')) {
@@ -26,6 +25,14 @@ function r2mo_offload_attachment_to_r2(int $attachment_id): array {
 	$status  = 'skipped';
 	$message = '';
 	$key     = '';
+
+	if (! r2mo_is_sdk_available()) {
+		return [
+			'status'  => 'failed',
+			'message' => r2mo_sdk_missing_message(),
+			'key'     => '',
+		];
+	}
 
 	if ($attachment_id <= 0 || get_post_type($attachment_id) !== 'attachment') {
 		return [
@@ -134,12 +141,9 @@ function r2mo_offload_attachment_to_r2(int $attachment_id): array {
 		if ($local_url !== '' && $cdn_url !== '' && $local_url !== $cdn_url) {
 			Url_Rewriter::rewrite_for_attachment($attachment_id, $local_url, $cdn_url);
 		}
-	} catch (AwsException $e) {
-		$status  = 'failed';
-		$message = $e->getAwsErrorMessage() ?: $e->getMessage();
 	} catch (\Throwable $e) {
 		$status  = 'failed';
-		$message = $e->getMessage();
+		$message = r2mo_get_aws_error_message($e);
 	}
 
 	return [

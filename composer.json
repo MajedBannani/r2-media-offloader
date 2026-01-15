@@ -4,7 +4,9 @@
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
   "require": {
-    "php": ">=8.0 <8.4",
+    "php": ">=8.0 <8.4"
+  },
+  "require-dev": {
     "aws/aws-sdk-php": ">=3.0 <3.300"
   },
   "autoload": {

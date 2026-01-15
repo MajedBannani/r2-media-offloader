@@ -13,8 +13,6 @@ declare(strict_types=1);
 
 namespace R2MO;
 
-use Aws\Exception\AwsException;
-
 if (! defined('ABSPATH')) {
 	exit;
 }
@@ -104,6 +102,10 @@ add_filter(
 			return $upload;
 		}
 
+		if (! r2mo_is_sdk_available()) {
+			return $upload;
+		}
+
 		$relative = r2mo_get_uploads_relative_path($file);
 		if ($relative === '') {
 			return $upload;
@@ -154,9 +156,6 @@ add_filter(
 			$r2mo_offload_cache[$file] = [
 				'key' => $key,
 			];
-		} catch (AwsException $e) {
-			// Fail gracefully: do not break upload flow.
-			return $upload;
 		} catch (\Throwable $e) {
 			// Fail gracefully: do not break upload flow.
 			return $upload;

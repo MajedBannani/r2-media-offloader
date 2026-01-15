@@ -9,8 +9,6 @@ declare(strict_types=1);
 
 namespace R2MO;
 
-use Aws\Exception\AwsException;
-
 if (! defined('ABSPATH')) {
 	exit;
 }
@@ -37,6 +35,16 @@ if (! defined('ABSPATH')) {
  */
 function r2mo_delete_local_for_attachment(int $attachment_id): array {
 	try {
+		if (! r2mo_is_sdk_available()) {
+			return [
+				'status'  => 'failed',
+				'message' => r2mo_sdk_missing_message(),
+				'deleted' => 0,
+				'skipped' => 0,
+				'failed'  => 1,
+			];
+		}
+
 		if ($attachment_id <= 0 || get_post_type($attachment_id) !== 'attachment') {
 			return [
 				'status'  => 'skipped',
@@ -92,18 +100,10 @@ function r2mo_delete_local_for_attachment(int $attachment_id): array {
 					'Key'    => $key,
 				]
 			);
-		} catch (AwsException $e) {
-			return [
-				'status'  => 'failed',
-				'message' => 'R2 object not accessible; local files kept.',
-				'deleted' => 0,
-				'skipped' => 0,
-				'failed'  => 1,
-			];
 		} catch (\Throwable $e) {
 			return [
 				'status'  => 'failed',
-				'message' => 'Error verifying R2 object; local files kept.',
+				'message' => r2mo_get_aws_error_message($e),
 				'deleted' => 0,
 				'skipped' => 0,
 				'failed'  => 1,

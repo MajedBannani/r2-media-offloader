@@ -337,6 +337,7 @@ final class Settings_Page {
 		}
 
 		check_admin_referer('r2mo_test_connection', '_r2mo_nonce');
+		self::redirect_if_sdk_missing();
 
 		$result = R2_Client::instance()->test_connection();
 
@@ -362,6 +363,7 @@ final class Settings_Page {
 		}
 
 		check_admin_referer('r2mo_sync_existing', '_r2mo_sync_nonce');
+		self::redirect_if_sdk_missing();
 
 		$result = \R2MO\r2mo_sync_existing_batch(50);
 
@@ -383,6 +385,7 @@ final class Settings_Page {
 		}
 
 		check_admin_referer('r2mo_delete_local', '_r2mo_delete_local_nonce');
+		self::redirect_if_sdk_missing();
 
 		$result = \R2MO\r2mo_delete_local_batch(50);
 
@@ -404,6 +407,7 @@ final class Settings_Page {
 		}
 
 		check_admin_referer('r2mo_restore_local', '_r2mo_restore_local_nonce');
+		self::redirect_if_sdk_missing();
 
 		$result = \R2MO\r2mo_restore_local_batch(50);
 
@@ -425,6 +429,7 @@ final class Settings_Page {
 		}
 
 		check_admin_referer('r2mo_purge_bucket', '_r2mo_purge_nonce');
+		self::redirect_if_sdk_missing();
 
 		// Require explicit confirmation.
 		$confirm = isset($_POST['r2mo_purge_confirm']) ? sanitize_text_field((string) wp_unslash($_POST['r2mo_purge_confirm'])) : '';
@@ -464,6 +469,7 @@ final class Settings_Page {
 		}
 
 		check_admin_referer('r2mo_optimize_webp', '_r2mo_optimize_webp_nonce');
+		self::redirect_if_sdk_missing();
 
 		$result = \R2MO\r2mo_optimize_webp_batch(20);
 
@@ -499,6 +505,24 @@ final class Settings_Page {
 		}
 
 		return $new_value;
+	}
+
+	/**
+	 * Redirect back to settings page with an error notice if SDK is missing.
+	 */
+	private static function redirect_if_sdk_missing(): void {
+		if (\R2MO\r2mo_is_sdk_available()) {
+			return;
+		}
+
+		$args = [
+			'page'                  => self::MENU_SLUG,
+			self::NOTICE_QS         => 'error',
+			self::NOTICE_MSG_QS     => \R2MO\r2mo_sdk_missing_message(),
+		];
+
+		wp_safe_redirect(add_query_arg(array_map('rawurlencode', $args), admin_url('options-general.php')));
+		exit;
 	}
 }
 

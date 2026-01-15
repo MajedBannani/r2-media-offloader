@@ -57,9 +57,30 @@ final class Plugin {
 		if (is_admin()) {
 			require_once R2MO_PATH . 'includes/admin/settings-page.php';
 			\R2MO\Admin\Settings_Page::init();
+			add_action('admin_notices', [__CLASS__, 'maybe_render_sdk_notice']);
 		}
 
 		// WP-CLI commands are registered from their own files when WP_CLI is available.
+	}
+
+	/**
+	 * Render an admin notice if the SDK is missing.
+	 */
+	public static function maybe_render_sdk_notice(): void {
+		if (! current_user_can('manage_options')) {
+			return;
+		}
+
+		if (r2mo_is_sdk_available()) {
+			return;
+		}
+
+		$screen = function_exists('get_current_screen') ? get_current_screen() : null;
+		if (! $screen || $screen->id !== 'settings_page_' . \R2MO\Admin\Settings_Page::MENU_SLUG) {
+			return;
+		}
+
+		echo '<div class="notice notice-warning"><p>' . esc_html(r2mo_sdk_missing_message()) . '</p></div>';
 	}
 }
 

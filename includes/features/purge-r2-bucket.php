@@ -9,8 +9,6 @@ declare(strict_types=1);
 
 namespace R2MO;
 
-use Aws\Exception\AwsException;
-
 if (! defined('ABSPATH')) {
 	exit;
 }
@@ -22,6 +20,14 @@ if (! defined('ABSPATH')) {
  */
 function r2mo_list_r2_objects(): array {
 	try {
+		if (! r2mo_is_sdk_available()) {
+			return [
+				'keys'  => [],
+				'total' => 0,
+				'error' => r2mo_sdk_missing_message(),
+			];
+		}
+
 		$bucket     = (string) Settings::get('bucket');
 		$path_prefix = (string) Settings::get('path_prefix');
 		$path_prefix = trim($path_prefix);
@@ -70,18 +76,11 @@ function r2mo_list_r2_objects(): array {
 			'total' => count($keys),
 			'error' => '',
 		];
-	} catch (AwsException $e) {
-		$msg = $e->getAwsErrorMessage() ?: $e->getMessage();
-		return [
-			'keys'  => [],
-			'total' => 0,
-			'error' => $msg !== '' ? $msg : __('Unknown error listing R2 objects.', 'media-offloader-for-cf-r2'),
-		];
 	} catch (\Throwable $e) {
 		return [
 			'keys'  => [],
 			'total' => 0,
-			'error' => $e->getMessage(),
+			'error' => r2mo_get_aws_error_message($e),
 		];
 	}
 }
@@ -114,6 +113,14 @@ function r2mo_delete_r2_objects(array $keys): array {
 	}
 
 	try {
+		if (! r2mo_is_sdk_available()) {
+			return [
+				'deleted' => 0,
+				'failed'  => count($keys),
+				'errors'  => [r2mo_sdk_missing_message()],
+			];
+		}
+
 		$bucket = (string) Settings::get('bucket');
 
 		if ($bucket === '') {
@@ -168,13 +175,9 @@ function r2mo_delete_r2_objects(array $keys): array {
 						$errors[] = sprintf(__('%1$s: %2$s', 'media-offloader-for-cf-r2'), $key, $msg);
 					}
 				}
-			} catch (AwsException $e) {
-				$failed += count($batch);
-				$msg = $e->getAwsErrorMessage() ?: $e->getMessage();
-				$errors[] = $msg !== '' ? $msg : __('Unknown batch deletion error.', 'media-offloader-for-cf-r2');
 			} catch (\Throwable $e) {
 				$failed += count($batch);
-				$errors[] = $e->getMessage();
+				$errors[] = r2mo_get_aws_error_message($e);
 			}
 		}
 

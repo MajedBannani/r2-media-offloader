@@ -26,6 +26,20 @@ if (defined('WP_CLI') && WP_CLI) {
 	 */
 	final class Sync_CLI {
 		/**
+		 * Guard to ensure SDK is available for CLI commands.
+		 *
+		 * @return bool
+		 */
+		private static function sdk_guard_or_warn(): bool {
+			if (\R2MO\r2mo_is_sdk_available()) {
+				return true;
+			}
+
+			WP_CLI::warning(\R2MO\r2mo_sdk_missing_message());
+			return false;
+		}
+
+		/**
 		 * Whether shutdown handler has been registered.
 		 *
 		 * @var bool
@@ -103,6 +117,10 @@ if (defined('WP_CLI') && WP_CLI) {
 		 */
 		public static function cmd_sync_existing(array $args, array $assoc_args): void {
 			try {
+				if (! self::sdk_guard_or_warn()) {
+					return;
+				}
+
 				$limit = isset($assoc_args['batch']) ? max(1, (int) $assoc_args['batch']) : 200;
 
 				WP_CLI::log('Starting CF R2 existing media sync...');
@@ -286,6 +304,10 @@ if (defined('WP_CLI') && WP_CLI) {
 		 */
 		public static function cmd_delete_local(array $args, array $assoc_args): void {
 			try {
+				if (! self::sdk_guard_or_warn()) {
+					return;
+				}
+
 				$limit = isset($assoc_args['batch']) ? max(1, (int) $assoc_args['batch']) : 200;
 
 				WP_CLI::log('Starting CF R2 safe local media cleanup...');
@@ -472,6 +494,10 @@ if (defined('WP_CLI') && WP_CLI) {
 		 */
 		public static function cmd_restore_local(array $args, array $assoc_args): void {
 			try {
+				if (! self::sdk_guard_or_warn()) {
+					return;
+				}
+
 				$limit = isset($assoc_args['batch']) ? max(1, (int) $assoc_args['batch']) : 200;
 
 				WP_CLI::log('Starting CF R2 local media restore...');
@@ -653,6 +679,10 @@ if (defined('WP_CLI') && WP_CLI) {
 		 */
 		public static function cmd_purge(array $args, array $assoc_args): void {
 			try {
+				if (! self::sdk_guard_or_warn()) {
+					return;
+				}
+
 				WP_CLI::log('⚠️  WARNING: This will permanently delete ALL objects in your R2 bucket (or under the configured path prefix).');
 				WP_CLI::log('This action cannot be undone.');
 
@@ -740,6 +770,10 @@ if (defined('WP_CLI') && WP_CLI) {
 		 */
 		public static function cmd_optimize_webp(array $args, array $assoc_args): void {
 			try {
+				if (! self::sdk_guard_or_warn()) {
+					return;
+				}
+
 				$limit = isset($assoc_args['batch']) ? max(1, (int) $assoc_args['batch']) : 20;
 
 				WP_CLI::log('Starting bulk WebP optimization for existing images...');

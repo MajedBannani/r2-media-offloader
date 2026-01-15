@@ -23,8 +23,18 @@ define('R2MO_VERSION', '1.0.0');
 define('R2MO_PATH', plugin_dir_path(__FILE__));
 define('R2MO_URL', plugin_dir_url(__FILE__));
 
-// Bundled vendor autoload (AWS SDK, etc). `vendor/` ships with the plugin.
-require_once R2MO_PATH . 'vendor/autoload.php';
+// Load SDK autoloader if bundled. Avoid hard dependency on vendor/ for WP.org.
+$autoload_candidates = [
+	R2MO_PATH . 'vendor/autoload.php',
+	R2MO_PATH . 'includes/sdk/autoload.php',
+];
+
+foreach ($autoload_candidates as $autoload_path) {
+	if (file_exists($autoload_path)) {
+		require_once $autoload_path;
+		break;
+	}
+}
 
 require_once R2MO_PATH . 'includes/class-plugin.php';
 
