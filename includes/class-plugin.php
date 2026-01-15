@@ -56,7 +56,9 @@ final class Plugin {
 		// Admin-only initialization (settings UI, etc).
 		if (is_admin()) {
 			require_once R2MO_PATH . 'includes/admin/settings-page.php';
+			require_once R2MO_PATH . 'includes/class-github-updater.php';
 			\R2MO\Admin\Settings_Page::init();
+			\R2MO\GitHub_Updater::init(plugin_basename(R2MO_PATH . 'r2-media-offloader.php'));
 			add_action('admin_notices', [__CLASS__, 'maybe_render_sdk_notice']);
 		}
 

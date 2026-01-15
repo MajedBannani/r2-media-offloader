@@ -9,6 +9,7 @@
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       media-offloader-for-cf-r2
+ * Update URI:        https://github.com/MajedBannani/webp-media-handler
  *
  * @package R2MO
  */
