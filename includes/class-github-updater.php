@@ -165,11 +165,16 @@ final class GitHub_Updater {
 			return null;
 		}
 
-		$tag_name = isset($data['tag_name']) ? (string) $data['tag_name'] : '';
-		$zipball  = isset($data['zipball_url']) ? (string) $data['zipball_url'] : '';
+		$tag_name  = isset($data['tag_name']) ? (string) $data['tag_name'] : '';
 		$published = isset($data['published_at']) ? (string) $data['published_at'] : '';
 
-		if ($tag_name === '' || $zipball === '') {
+		if ($tag_name === '') {
+			return null;
+		}
+
+		$assets = isset($data['assets']) && is_array($data['assets']) ? $data['assets'] : [];
+		$package = $this->find_release_asset_url($assets);
+		if ($package === '') {
 			return null;
 		}
 
@@ -177,13 +182,52 @@ final class GitHub_Updater {
 
 		$release = [
 			'version'      => $version,
-			'package'      => $zipball,
+			'package'      => $package,
 			'published_at' => $published,
 		];
 
 		set_transient(self::CACHE_KEY, $release, self::CACHE_TTL);
 
 		return $release;
+	}
+
+	/**
+	 * Find a valid release asset URL.
+	 *
+	 * @param array<int, mixed> $assets Assets array.
+	 * @return string
+	 */
+	private function find_release_asset_url(array $assets): string {
+		$preferred = '';
+		$fallback  = '';
+
+		foreach ($assets as $asset) {
+			if (! is_array($asset)) {
+				continue;
+			}
+
+			$name = isset($asset['name']) ? (string) $asset['name'] : '';
+			$url  = isset($asset['browser_download_url']) ? (string) $asset['browser_download_url'] : '';
+
+			if ($name === '' || $url === '') {
+				continue;
+			}
+
+			if (! str_ends_with($name, '.zip')) {
+				continue;
+			}
+
+			if ($name === 'r2-media-offloader.zip') {
+				$preferred = $url;
+				break;
+			}
+
+			if ($fallback === '') {
+				$fallback = $url;
+			}
+		}
+
+		return $preferred !== '' ? $preferred : $fallback;
 	}
 
 	/**
