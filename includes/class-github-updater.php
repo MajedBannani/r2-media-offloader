@@ -19,6 +19,7 @@ final class GitHub_Updater {
 	private const CACHE_KEY = 'r2mo_github_release';
 	private const CACHE_TTL = 6 * HOUR_IN_SECONDS;
 	private const ASSET_NAME = 'media-offloader-for-cf-r2.zip';
+	private const EXPECTED_SLUG = 'media-offloader-for-cf-r2';
 
 	/**
 	 * Plugin basename (directory/file.php).
@@ -52,6 +53,7 @@ final class GitHub_Updater {
 		add_filter('site_transient_update_plugins', [$instance, 'filter_update_transient']);
 		add_filter('plugins_api', [$instance, 'filter_plugins_api'], 10, 3);
 		add_filter('upgrader_pre_download', [$instance, 'filter_pre_download'], 10, 3);
+		add_filter('upgrader_source_selection', [$instance, 'filter_source_selection'], 10, 4);
 	}
 
 	/**
@@ -168,6 +170,38 @@ final class GitHub_Updater {
 		}
 
 		return $reply;
+	}
+
+	/**
+	 * Abort updates if the extracted folder name is not stable.
+	 *
+	 * WordPress requires the extracted folder to match the installed plugin folder
+	 * exactly; otherwise it treats the update as a different plugin and deactivates it.
+	 *
+	 * @param string|\WP_Error $source        Source directory.
+	 * @param string           $remote_source Remote source directory.
+	 * @param \WP_Upgrader     $upgrader      Upgrader instance.
+	 * @param array<string,mixed> $hook_extra Hook extra arguments.
+	 * @return string|\WP_Error
+	 */
+	public function filter_source_selection($source, string $remote_source, \WP_Upgrader $upgrader, array $hook_extra) {
+		if (is_wp_error($source)) {
+			return $source;
+		}
+
+		if (! isset($upgrader->skin->plugin) || $upgrader->skin->plugin !== $this->plugin_file) {
+			return $source;
+		}
+
+		$folder = basename(wp_normalize_path(untrailingslashit($source)));
+		if ($folder !== self::EXPECTED_SLUG) {
+			return new \WP_Error(
+				'r2mo_github_folder_mismatch',
+				__('Update package folder name is invalid. Update aborted to prevent plugin deactivation.', 'media-offloader-for-cf-r2')
+			);
+		}
+
+		return $source;
 	}
 
 	/**
