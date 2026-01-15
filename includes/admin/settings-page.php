@@ -165,6 +165,11 @@ final class Settings_Page {
 				} elseif ($key === 'path_prefix') {
 					echo '<p class="description">' . esc_html__('Optional prefix added before the uploads path in R2 (e.g. "wp"). Use "/" or leave blank for none.', 'media-offloader-for-cf-r2') . '</p>';
 				}
+
+				$description = self::get_field_description($key);
+				if ($description !== '') {
+					echo '<p class="description">' . esc_html($description) . '</p>';
+				}
 			},
 			self::SETTINGS_GROUP,
 			'r2mo_main'
@@ -197,7 +202,7 @@ final class Settings_Page {
 		$webp_skipped     = isset($_GET[self::WEBP_SKIPPED_QS]) ? (int) $_GET[self::WEBP_SKIPPED_QS] : 0;
 		$webp_failed      = isset($_GET[self::WEBP_FAILED_QS]) ? (int) $_GET[self::WEBP_FAILED_QS] : 0;
 
-		echo '<div class="wrap">';
+		echo '<div class="wrap media-offloader-settings">';
 		echo '<h1>' . esc_html__('Media Offloader for CF R2', 'media-offloader-for-cf-r2') . '</h1>';
 
 		if ($notice_type === 'success') {
@@ -275,6 +280,7 @@ final class Settings_Page {
 		echo '<input type="hidden" name="action" value="r2mo_test_connection" />';
 		wp_nonce_field('r2mo_test_connection', '_r2mo_nonce');
 		submit_button(__('Test Connection', 'media-offloader-for-cf-r2'), 'secondary', 'submit', false);
+		echo '<p class="description r2mo-action-description">' . esc_html(self::get_action_description('r2mo_test_connection')) . '</p>';
 		echo '</form>';
 
 		// Sync Existing Media button (processes one batch per request).
@@ -282,6 +288,7 @@ final class Settings_Page {
 		echo '<input type="hidden" name="action" value="r2mo_sync_existing" />';
 		wp_nonce_field('r2mo_sync_existing', '_r2mo_sync_nonce');
 		submit_button(__('Sync Existing Media to R2', 'media-offloader-for-cf-r2'), 'secondary', 'submit', false);
+		echo '<p class="description r2mo-action-description">' . esc_html(self::get_action_description('r2mo_sync_existing')) . '</p>';
 		echo '</form>';
 
 		// Safe local media cleanup button (processes one batch per request).
@@ -289,6 +296,7 @@ final class Settings_Page {
 		echo '<input type="hidden" name="action" value="r2mo_delete_local" />';
 		wp_nonce_field('r2mo_delete_local', '_r2mo_delete_local_nonce');
 		submit_button(__('Delete Local Media (Safe Cleanup)', 'media-offloader-for-cf-r2'), 'delete', 'submit', false);
+		echo '<p class="description r2mo-action-description">' . esc_html(self::get_action_description('r2mo_delete_local')) . '</p>';
 		echo '</form>';
 
 		// Restore local media from R2 (processes one batch per request).
@@ -296,6 +304,7 @@ final class Settings_Page {
 		echo '<input type="hidden" name="action" value="r2mo_restore_local" />';
 		wp_nonce_field('r2mo_restore_local', '_r2mo_restore_local_nonce');
 		submit_button(__('Restore Local Media from R2', 'media-offloader-for-cf-r2'), 'secondary', 'submit', false);
+		echo '<p class="description r2mo-action-description">' . esc_html(self::get_action_description('r2mo_restore_local')) . '</p>';
 		echo '</form>';
 
 		// Bulk optimize existing images to WebP (processes one batch per request).
@@ -303,6 +312,7 @@ final class Settings_Page {
 		echo '<input type="hidden" name="action" value="r2mo_optimize_webp" />';
 		wp_nonce_field('r2mo_optimize_webp', '_r2mo_optimize_webp_nonce');
 		submit_button(__('Bulk Optimize Existing Images (WebP)', 'media-offloader-for-cf-r2'), 'secondary', 'submit', false);
+		echo '<p class="description r2mo-action-description">' . esc_html(self::get_action_description('r2mo_optimize_webp')) . '</p>';
 		echo '</form>';
 		echo '</div>';
 
@@ -318,6 +328,7 @@ final class Settings_Page {
 		echo '<input type="text" id="r2mo_purge_confirm" name="r2mo_purge_confirm" value="" class="regular-text" autocomplete="off" />';
 		echo '</p>';
 		submit_button(__('⚠️ Purge CF R2 Bucket', 'media-offloader-for-cf-r2'), 'delete', 'submit', false);
+		echo '<p class="description r2mo-action-description">' . esc_html(self::get_action_description('r2mo_purge_bucket')) . '</p>';
 		echo '</form>';
 		echo '</div>';
 
@@ -523,6 +534,94 @@ final class Settings_Page {
 
 		wp_safe_redirect(add_query_arg(array_map('rawurlencode', $args), admin_url('options-general.php')));
 		exit;
+	}
+
+	/**
+	 * Check whether the current locale is Arabic.
+	 */
+	private static function is_arabic_locale(): bool {
+		$locale = function_exists('get_locale') ? (string) get_locale() : '';
+		return str_starts_with($locale, 'ar');
+	}
+
+	/**
+	 * Get localized field description.
+	 */
+	private static function get_field_description(string $key): string {
+		$is_ar = self::is_arabic_locale();
+
+		$descriptions = [
+			'account_id'  => [
+				'en' => 'Your Cloudflare account identifier. Required to authenticate requests to your R2 storage.',
+				'ar' => 'معرّف حسابك في Cloudflare. مطلوب لإنشاء اتصال مع خدمة R2.',
+			],
+			'access_key'  => [
+				'en' => 'Public access key used to authenticate with your R2 bucket.',
+				'ar' => 'مفتاح الوصول العام المستخدم للاتصال بـ R2.',
+			],
+			'secret_key'  => [
+				'en' => 'Secret key used together with the Access Key to sign requests. Keep this private.',
+				'ar' => 'المفتاح السري المستخدم مع Access Key. يجب عدم مشاركته.',
+			],
+			'bucket'      => [
+				'en' => 'The name of the R2 bucket where media files will be stored.',
+				'ar' => 'اسم الـ Bucket الذي سيتم حفظ ملفات الوسائط فيه.',
+			],
+			'public_url'  => [
+				'en' => 'Public CDN URL used to serve media files from R2.',
+				'ar' => 'رابط CDN العام المستخدم لعرض الملفات من R2.',
+			],
+			'path_prefix' => [
+				'en' => 'Optional folder path inside the bucket to organize uploads. Leave empty if not needed.',
+				'ar' => 'مسار اختياري داخل الـ Bucket لتنظيم الملفات. اتركه فارغًا إذا لم يكن مطلوبًا.',
+			],
+		];
+
+		if (! isset($descriptions[$key])) {
+			return '';
+		}
+
+		return $is_ar ? $descriptions[$key]['ar'] : $descriptions[$key]['en'];
+	}
+
+	/**
+	 * Get localized action description.
+	 */
+	private static function get_action_description(string $action): string {
+		$is_ar = self::is_arabic_locale();
+
+		$descriptions = [
+			'r2mo_test_connection' => [
+				'en' => 'Verifies that the provided credentials can connect to Cloudflare R2 without modifying any data.',
+				'ar' => 'يتحقق من صحة بيانات الاتصال دون رفع أو حذف أي ملفات.',
+			],
+			'r2mo_sync_existing'   => [
+				'en' => 'Uploads all existing media files to Cloudflare R2. Local files are not deleted.',
+				'ar' => 'يرفع جميع ملفات الوسائط الحالية إلى R2 دون حذف النسخ المحلية.',
+			],
+			'r2mo_delete_local'    => [
+				'en' => 'Safely removes local media files after confirming they exist on R2.',
+				'ar' => 'يحذف الملفات المحلية فقط بعد التأكد من وجودها على R2.',
+			],
+			'r2mo_restore_local'   => [
+				'en' => 'Restores missing local media files from Cloudflare R2 back to the server.',
+				'ar' => 'يعيد تحميل الملفات من R2 إلى السيرفر المحلي.',
+			],
+			'r2mo_optimize_webp'   => [
+				'en' => 'Optimizes existing JPG and PNG images by generating WebP versions.',
+				'ar' => 'يحسّن الصور الحالية (JPG و PNG) عن طريق إنشاء نسخ WebP.',
+			],
+			'r2mo_purge_bucket'    => [
+				'en' => 'Deletes all objects from the R2 bucket. This action is irreversible.',
+				'ar' => 'يحذف جميع الملفات داخل الـ Bucket. هذا الإجراء لا يمكن التراجع عنه.',
+			],
+		];
+
+		if (! isset($descriptions[$action])) {
+			return '';
+		}
+
+		return $is_ar ? $descriptions[$action]['ar'] : $descriptions[$action]['en'];
 	}
 }
 

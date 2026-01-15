@@ -4,13 +4,58 @@
  * @package R2MO
  */
 
-/* Save Changes button spacing */
-.r2mo-settings-form {
-	margin-block-end: 20px;
+/* Base wrapper */
+.media-offloader-settings {
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+}
+
+.media-offloader-settings h1,
+.media-offloader-settings h2 {
+	font-weight: 600;
+}
+
+/* Settings form container */
+.media-offloader-settings .r2mo-settings-form {
+	margin-block-end: 24px;
+}
+
+.media-offloader-settings .r2mo-settings-form .form-table {
+	background: #ffffff;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	padding-block: 12px;
+	padding-inline: 16px;
+	margin-block-start: 12px;
+}
+
+.media-offloader-settings .r2mo-settings-form .form-table th,
+.media-offloader-settings .r2mo-settings-form .form-table td {
+	padding-block: 12px;
+	padding-inline: 0;
+	text-align: start;
+}
+
+.media-offloader-settings .r2mo-settings-form input.regular-text {
+	border: 1px solid #ccd0d4;
+	border-radius: 4px;
+	padding-block: 6px;
+	padding-inline: 8px;
+}
+
+.media-offloader-settings .r2mo-settings-form input.regular-text:focus {
+	border-color: #2271b1;
+	box-shadow: 0 0 0 1px #2271b1;
+}
+
+.media-offloader-settings .description {
+	color: #646970;
+	font-size: 12px;
+	margin-block-start: 6px;
+	max-width: 560px;
 }
 
 /* Action buttons container */
-.r2mo-actions-group {
+.media-offloader-settings .r2mo-actions-group {
 	background: #f6f7f7;
 	border: 1px solid #dcdcde;
 	border-radius: 6px;
@@ -20,37 +65,43 @@
 }
 
 /* Section separation for actions group */
-.r2mo-actions-group.r2mo-section-separator {
+.media-offloader-settings .r2mo-actions-group.r2mo-section-separator {
 	border-block-start: 1px solid #dcdcde;
 	padding-block-start: 30px;
 }
 
 /* Individual action button forms */
-.r2mo-action-form {
-	margin-block-start: 10px;
+.media-offloader-settings .r2mo-action-form {
+	margin-block-start: 12px;
 }
 
-.r2mo-action-form:first-child {
+.media-offloader-settings .r2mo-action-form:first-child {
 	margin-block-start: 0;
+}
+
+.media-offloader-settings .r2mo-action-description {
+	margin-block-start: 6px;
+	margin-block-end: 0;
 }
 
 /* Danger Zone section */
-.r2mo-danger-zone {
+.media-offloader-settings .r2mo-danger-zone {
 	border-block-start: 1px solid #dcdcde;
-	margin-block-start: 40px;
-	padding-block-start: 30px;
+	margin-block-start: 36px;
+	padding-block-start: 24px;
 }
 
-.r2mo-danger-zone h2 {
+.media-offloader-settings .r2mo-danger-zone h2 {
 	margin-block-start: 0;
+	font-weight: 600;
 }
 
-.r2mo-danger-zone .description {
-	margin-block-end: 20px;
+.media-offloader-settings .r2mo-danger-zone .description {
+	margin-block-end: 16px;
 }
 
 /* Support box */
-.r2mo-support-box {
+.media-offloader-settings .r2mo-support-box {
 	background: #f6f7f7;
 	border: 1px solid #dcdcde;
 	border-radius: 8px;
@@ -60,12 +111,16 @@
 	text-align: center;
 }
 
-.r2mo-support-button {
+.media-offloader-settings .r2mo-support-box .description {
+	margin-inline: auto;
+}
+
+.media-offloader-settings .r2mo-support-button {
 	display: inline-block;
 	margin-block-start: 12px;
 }
 
-.r2mo-support-footer {
+.media-offloader-settings .r2mo-support-footer {
 	color: #646970;
 	font-size: 12px;
 	margin-block-start: 12px;
