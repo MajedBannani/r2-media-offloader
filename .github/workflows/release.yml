@@ -19,8 +19,8 @@ jobs:
 
       - name: Build plugin ZIP
         env:
-          PLUGIN_SLUG: media-offloader-for-cf-r2
-          MAIN_FILE: media-offloader-for-cf-r2.php
+          PLUGIN_SLUG: r2-media-offloader
+          MAIN_FILE: r2-media-offloader.php
         run: |
           set -euo pipefail
 
@@ -49,8 +49,8 @@ jobs:
 
       - name: Validate ZIP structure
         env:
-          PLUGIN_SLUG: media-offloader-for-cf-r2
-          MAIN_FILE: media-offloader-for-cf-r2.php
+          PLUGIN_SLUG: r2-media-offloader
+          MAIN_FILE: r2-media-offloader.php
         run: |
           set -euo pipefail
 
@@ -73,4 +73,4 @@ jobs:
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
-          files: build/media-offloader-for-cf-r2.zip
+          files: build/r2-media-offloader.zip
