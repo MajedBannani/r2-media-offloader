@@ -18,6 +18,7 @@ final class GitHub_Updater {
 	private const REPO_URL = 'https://github.com/MajedBannani/r2-media-offloader';
 	private const CACHE_KEY = 'r2mo_github_release';
 	private const CACHE_TTL = 6 * HOUR_IN_SECONDS;
+	private const ASSET_NAME = 'media-offloader-for-cf-r2.zip';
 
 	/**
 	 * Plugin basename (directory/file.php).
@@ -50,6 +51,7 @@ final class GitHub_Updater {
 		$instance = new self($plugin_file);
 		add_filter('site_transient_update_plugins', [$instance, 'filter_update_transient']);
 		add_filter('plugins_api', [$instance, 'filter_plugins_api'], 10, 3);
+		add_filter('upgrader_pre_download', [$instance, 'filter_pre_download'], 10, 3);
 	}
 
 	/**
@@ -129,6 +131,42 @@ final class GitHub_Updater {
 	}
 
 	/**
+	 * Guard against invalid packages to prevent folder mismatches.
+	 *
+	 * @param mixed             $reply   Download reply.
+	 * @param string            $package Package URL.
+	 * @param \WP_Upgrader|null $upgrader Upgrader instance.
+	 * @return mixed
+	 */
+	public function filter_pre_download($reply, string $package, $upgrader) {
+		if (! is_object($upgrader) || ! isset($upgrader->skin->plugin)) {
+			return $reply;
+		}
+
+		if ($upgrader->skin->plugin !== $this->plugin_file) {
+			return $reply;
+		}
+
+		$release = $this->get_latest_release();
+		if ($release === null) {
+			return new \WP_Error(
+				'r2mo_github_no_release',
+				__('Unable to fetch the latest release from GitHub.', 'media-offloader-for-cf-r2')
+			);
+		}
+
+		if ($package !== $release['package']) {
+			// Prevent WordPress from installing a ZIP that extracts to the wrong folder.
+			return new \WP_Error(
+				'r2mo_github_invalid_package',
+				__('Update package is invalid or missing. Please try again later.', 'media-offloader-for-cf-r2')
+			);
+		}
+
+		return $reply;
+	}
+
+	/**
 	 * Fetch the latest GitHub release.
 	 *
 	 * @return array{version:string,package:string,published_at:string}|null
@@ -172,7 +210,7 @@ final class GitHub_Updater {
 			return null;
 		}
 
-		$assets = isset($data['assets']) && is_array($data['assets']) ? $data['assets'] : [];
+		$assets  = isset($data['assets']) && is_array($data['assets']) ? $data['assets'] : [];
 		$package = $this->find_release_asset_url($assets);
 		if ($package === '') {
 			return null;
@@ -198,9 +236,6 @@ final class GitHub_Updater {
 	 * @return string
 	 */
 	private function find_release_asset_url(array $assets): string {
-		$preferred = '';
-		$fallback  = '';
-
 		foreach ($assets as $asset) {
 			if (! is_array($asset)) {
 				continue;
@@ -213,21 +248,12 @@ final class GitHub_Updater {
 				continue;
 			}
 
-			if (! str_ends_with($name, '.zip')) {
-				continue;
-			}
-
-			if ($name === 'r2-media-offloader.zip') {
-				$preferred = $url;
-				break;
-			}
-
-			if ($fallback === '') {
-				$fallback = $url;
+			if ($name === self::ASSET_NAME) {
+				return $url;
 			}
 		}
 
-		return $preferred !== '' ? $preferred : $fallback;
+		return '';
 	}
 
 	/**
