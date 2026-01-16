@@ -41,15 +41,6 @@ add_filter(
 			return $url;
 		}
 
-		// Prefer WebP version if available.
-		$webp_key = get_post_meta($attachment_id, '_r2_webp_key', true);
-		if (is_string($webp_key) && $webp_key !== '') {
-			$webp_url = r2mo_public_url_for_key($webp_key);
-			if ($webp_url !== '') {
-				return $webp_url;
-			}
-		}
-
 		// Fallback to original offloaded version.
 		$offloaded = get_post_meta($attachment_id, '_r2_offloaded', true);
 		if (! $offloaded) {

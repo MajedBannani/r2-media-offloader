@@ -34,10 +34,6 @@ final class Settings_Page {
 	private const RESTORE_FAILED_QS = 'r2mo_restore_failed';
 	private const PURGE_NOTICE_QS = 'r2mo_purge_notice';
 	private const PURGE_MSG_QS = 'r2mo_purge_msg';
-	private const WEBP_NOTICE_QS = 'r2mo_webp_notice';
-	private const WEBP_OPTIMIZED_QS = 'r2mo_webp_optimized';
-	private const WEBP_SKIPPED_QS = 'r2mo_webp_skipped';
-	private const WEBP_FAILED_QS = 'r2mo_webp_failed';
 	private const SETTINGS_GROUP = 'r2mo_settings_group';
 
 	public static function init(): void {
@@ -49,8 +45,6 @@ final class Settings_Page {
 		add_action('admin_post_r2mo_delete_local', [__CLASS__, 'handle_delete_local']);
 		add_action('admin_post_r2mo_restore_local', [__CLASS__, 'handle_restore_local']);
 		add_action('admin_post_r2mo_purge_bucket', [__CLASS__, 'handle_purge_bucket']);
-		add_action('admin_post_r2mo_optimize_webp', [__CLASS__, 'handle_optimize_webp']);
-
 		// Preserve existing secret_key if password field is left blank (password input is intentionally empty on reload).
 		add_filter('pre_update_option_' . Settings::OPTION_KEY, [__CLASS__, 'preserve_secret_key'], 10, 2);
 	}
@@ -197,10 +191,6 @@ final class Settings_Page {
 		$restore_failed   = isset($_GET[self::RESTORE_FAILED_QS]) ? (int) $_GET[self::RESTORE_FAILED_QS] : 0;
 		$purge_notice     = isset($_GET[self::PURGE_NOTICE_QS]) ? sanitize_key((string) wp_unslash($_GET[self::PURGE_NOTICE_QS])) : '';
 		$purge_msg        = isset($_GET[self::PURGE_MSG_QS]) ? sanitize_text_field((string) wp_unslash($_GET[self::PURGE_MSG_QS])) : '';
-		$webp_notice      = isset($_GET[self::WEBP_NOTICE_QS]) ? sanitize_key((string) wp_unslash($_GET[self::WEBP_NOTICE_QS])) : '';
-		$webp_optimized   = isset($_GET[self::WEBP_OPTIMIZED_QS]) ? (int) $_GET[self::WEBP_OPTIMIZED_QS] : 0;
-		$webp_skipped     = isset($_GET[self::WEBP_SKIPPED_QS]) ? (int) $_GET[self::WEBP_SKIPPED_QS] : 0;
-		$webp_failed      = isset($_GET[self::WEBP_FAILED_QS]) ? (int) $_GET[self::WEBP_FAILED_QS] : 0;
 
 		echo '<div class="wrap media-offloader-settings">';
 		echo '<h1>' . esc_html__('Media Offloader for CF R2', 'media-offloader-for-cf-r2') . '</h1>';
@@ -252,16 +242,6 @@ final class Settings_Page {
 			echo '<div class="notice notice-error is-dismissible"><p>' . esc_html($text) . '</p></div>';
 		}
 
-		if ($webp_notice === 'done') {
-			$text = sprintf(
-				/* translators: 1: optimized count, 2: skipped count, 3: failed count */
-				esc_html__('WebP optimization batch complete. Optimized: %1$d, Skipped: %2$d, Failed: %3$d.', 'media-offloader-for-cf-r2'),
-				$webp_optimized,
-				$webp_skipped,
-				$webp_failed
-			);
-			echo '<div class="notice notice-info is-dismissible"><p>' . esc_html($text) . '</p></div>';
-		}
 
 		// Settings form uses WordPress Settings API which handles nonce verification automatically.
 		// settings_fields() includes the nonce field and WordPress verifies it before calling sanitize_callback.
@@ -307,13 +287,6 @@ final class Settings_Page {
 		echo '<p class="description r2mo-action-description">' . esc_html(self::get_action_description('r2mo_restore_local')) . '</p>';
 		echo '</form>';
 
-		// Bulk optimize existing images to WebP (processes one batch per request).
-		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="r2mo-action-form">';
-		echo '<input type="hidden" name="action" value="r2mo_optimize_webp" />';
-		wp_nonce_field('r2mo_optimize_webp', '_r2mo_optimize_webp_nonce');
-		submit_button(__('Bulk Optimize Existing Images (WebP)', 'media-offloader-for-cf-r2'), 'secondary', 'submit', false);
-		echo '<p class="description r2mo-action-description">' . esc_html(self::get_action_description('r2mo_optimize_webp')) . '</p>';
-		echo '</form>';
 		echo '</div>';
 
 		// Purge R2 bucket (requires confirmation).
@@ -474,27 +447,6 @@ final class Settings_Page {
 		exit;
 	}
 
-	public static function handle_optimize_webp(): void {
-		if (! current_user_can('manage_options')) {
-			wp_die(esc_html__('You do not have permission to perform this action.', 'media-offloader-for-cf-r2'));
-		}
-
-		check_admin_referer('r2mo_optimize_webp', '_r2mo_optimize_webp_nonce');
-		self::redirect_if_sdk_missing();
-
-		$result = \R2MO\r2mo_optimize_webp_batch(20);
-
-		$args = [
-			'page'                    => self::MENU_SLUG,
-			self::WEBP_NOTICE_QS      => 'done',
-			self::WEBP_OPTIMIZED_QS   => $result['optimized'],
-			self::WEBP_SKIPPED_QS     => $result['skipped'],
-			self::WEBP_FAILED_QS      => $result['failed'],
-		];
-
-		wp_safe_redirect(add_query_arg(array_map('rawurlencode', $args), admin_url('options-general.php')));
-		exit;
-	}
 
 	/**
 	 * Preserve secret_key if incoming value is blank.
@@ -606,10 +558,6 @@ final class Settings_Page {
 			'r2mo_restore_local'   => [
 				'en' => __('Restores missing local media files from Cloudflare R2 back to the server.', 'media-offloader-for-cf-r2'),
 				'ar' => __('يعيد تحميل الملفات من R2 إلى السيرفر المحلي.', 'media-offloader-for-cf-r2'),
-			],
-			'r2mo_optimize_webp'   => [
-				'en' => __('Optimizes existing JPG and PNG images by generating WebP versions.', 'media-offloader-for-cf-r2'),
-				'ar' => __('يحسّن الصور الحالية (JPG و PNG) عن طريق إنشاء نسخ WebP.', 'media-offloader-for-cf-r2'),
 			],
 			'r2mo_purge_bucket'    => [
 				'en' => __('Deletes all objects from the R2 bucket. This action is irreversible.', 'media-offloader-for-cf-r2'),

@@ -52,8 +52,7 @@ r2-media-offloader/
 │   │   ├── delete-local-media.php  # Safe local cleanup
 │   │   ├── restore-local-media.php # Restore from R2
 │   │   ├── purge-r2-bucket.php     # R2 bucket purge
-│   │   ├── webp-conversion.php     # Auto WebP for new uploads
-│   │   └── bulk-webp-optimization.php # Bulk WebP optimization
+│   │   └── webp-conversion.php     # Auto WebP for new uploads
 │   └── services/
 │       └── class-url-rewriter.php   # URL replacement service
 └── cli/
@@ -71,7 +70,7 @@ r2-media-offloader/
 ### URL Rewriting (`rewrite-urls.php`)
 - **Hook**: `wp_get_attachment_url` (priority 20)
 - **Purpose**: Rewrite attachment URLs to CDN URLs
-- **Logic**: Prefers WebP version if available, falls back to original
+- **Logic**: Uses offloaded R2 object key for the original file
 - **Safety**: Always falls back to local URL if CDN unavailable
 
 ### Bulk Sync (`sync-existing-media.php`)
@@ -109,14 +108,6 @@ r2-media-offloader/
 - **Safety**: Falls back to original if conversion fails
 - **Behavior**: Replaces original file, updates MIME type in upload array
 
-### Bulk WebP Optimization (`bulk-webp-optimization.php`)
-- **Purpose**: Convert existing images to WebP
-- **Safety**: 
-  - Preserves original files
-  - Only processes JPEG/PNG images
-  - Skips already-optimized attachments
-  - Uploads WebP to R2, stores `_r2_webp_key` meta
-
 ### URL Rewriter Service (`class-url-rewriter.php`)
 - **Purpose**: Replace local URLs with CDN URLs across WordPress storage
 - **Scope**: 
@@ -139,7 +130,6 @@ r2-media-offloader/
 2. `wp r2 delete-local` - Safe local file cleanup
 3. `wp r2 restore-local` - Restore files from R2
 4. `wp r2 purge` - Purge R2 bucket (with confirmation)
-5. `wp r2 optimize-webp` - Bulk WebP optimization
 
 ### Error Handling Strategy
 - **Top-level try/catch**: Entire command wrapped in try/catch
@@ -185,7 +175,6 @@ r2-media-offloader/
 ### Attachment Meta Keys
 - `_r2_offloaded` (boolean) - Whether attachment is offloaded to R2
 - `_r2_key` (string) - R2 object key for original file
-- `_r2_webp_key` (string) - R2 object key for WebP version (if optimized)
 - `_r2_local_deleted` (boolean) - Whether local file has been safely deleted
 
 ## Security Considerations

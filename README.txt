@@ -8,7 +8,7 @@ Stable tag: 1.0.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Offload WordPress media to Cloudflare R2 with CDN URL rewriting, safe cleanup, restore tools, and built-in WebP optimization.
+Offload WordPress media to Cloudflare R2 with CDN URL rewriting, safe cleanup, restore tools, and automatic WebP conversion for new uploads.
 
 == Description ==
 
@@ -19,7 +19,6 @@ The plugin automatically offloads new media uploads to R2, rewrites media URLs t
 Built-in image optimization features include:
 
 * Automatic WebP conversion for new uploads
-* Bulk WebP optimization for existing images
 
 All operations are designed with safety in mind. The plugin avoids broken links, prevents database corruption, and ensures that all destructive actions are explicitly triggered by the user.
 
@@ -32,7 +31,6 @@ All operations are designed with safety in mind. The plugin avoids broken links,
 * Safe restore from R2 back to local storage
 * Full R2 bucket purge with confirmation
 * Automatic WebP conversion for new uploads
-* Bulk WebP optimization for existing images
 * WP-CLI commands for all heavy operations
 * No vendor lock-in – fully reversible at any time
 
@@ -44,7 +42,6 @@ The plugin provides WP-CLI commands for advanced and large-scale operations:
 * `wp r2 delete-local`
 * `wp r2 restore-local`
 * `wp r2 purge`
-* `wp r2 optimize-webp`
 
 == Installation ==
 

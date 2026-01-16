@@ -51,7 +51,6 @@ function r2mo_uninstall_cleanup_site(): void {
 		'_r2_offloaded',
 		'_r2_key',
 		'_r2_local_deleted',
-		'_r2_webp_key',
 	];
 
 	foreach ($meta_keys as $meta_key) {

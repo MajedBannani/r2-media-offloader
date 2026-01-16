@@ -43,7 +43,6 @@ final class Plugin {
 		require_once R2MO_PATH . 'includes/features/delete-local-media.php';
 		require_once R2MO_PATH . 'includes/features/restore-local-media.php';
 		require_once R2MO_PATH . 'includes/features/purge-r2-bucket.php';
-		require_once R2MO_PATH . 'includes/features/bulk-webp-optimization.php';
 		require_once R2MO_PATH . 'cli/class-sync-cli.php';
 	}
 
