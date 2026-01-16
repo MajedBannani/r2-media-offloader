@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Media Offloader for CF R2
  * Description:       Foundation plugin for offloading WordPress media to CF R2 (S3-compatible storage).
- * Version:           1.0.15
+ * Version:           1.0.16
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Majed Talal
@@ -20,7 +20,7 @@ if (! defined('ABSPATH')) {
 	exit;
 }
 
-define('R2MO_VERSION', '1.0.12');
+define('R2MO_VERSION', '1.0.16');
 define('R2MO_PATH', plugin_dir_path(__FILE__));
 define('R2MO_URL', plugin_dir_url(__FILE__));
 define('R2MO_PLUGIN_SLUG', 'r2-media-offloader');
