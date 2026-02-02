@@ -101,9 +101,10 @@ function r2mo_list_r2_objects(): array {
  *
  * @since 1.0.0
  * @param array<string> $keys Object keys to delete.
+ * @param callable|null $on_batch Optional callback for progress reporting.
  * @return array{deleted:int,failed:int,errors:array<string>} Result array with deletion counts and errors.
  */
-function r2mo_delete_r2_objects(array $keys): array {
+function r2mo_delete_r2_objects(array $keys, ?callable $on_batch = null): array {
 	if (empty($keys)) {
 		return [
 			'deleted' => 0,
@@ -163,6 +164,16 @@ function r2mo_delete_r2_objects(array $keys): array {
 
 				if (isset($result['Deleted']) && is_array($result['Deleted'])) {
 					$deleted += count($result['Deleted']);
+					$deleted_keys = [];
+					foreach ($result['Deleted'] as $deleted_item) {
+						if (isset($deleted_item['Key']) && is_string($deleted_item['Key'])) {
+							$deleted_keys[] = $deleted_item['Key'];
+						}
+					}
+
+					if (! empty($deleted_keys)) {
+						r2mo_clear_offload_meta_for_keys($deleted_keys);
+					}
 				}
 
 				if (isset($result['Errors']) && is_array($result['Errors'])) {
@@ -175,9 +186,15 @@ function r2mo_delete_r2_objects(array $keys): array {
 						$errors[] = sprintf(__('%1$s: %2$s', 'media-offloader-for-cf-r2'), $key, $msg);
 					}
 				}
+				if (is_callable($on_batch)) {
+					$on_batch(count($batch), $deleted, $failed);
+				}
 			} catch (\Throwable $e) {
 				$failed += count($batch);
 				$errors[] = r2mo_get_aws_error_message($e);
+				if (is_callable($on_batch)) {
+					$on_batch(count($batch), $deleted, $failed);
+				}
 			}
 		}
 
@@ -212,14 +229,20 @@ function r2mo_delete_r2_objects(array $keys): array {
  * - Logs all operations for audit trail
  *
  * @since 1.0.0
+ * @param callable|null $on_batch Optional callback for progress reporting.
+ * @param array<string>|null $prelisted_keys Optional pre-listed keys to avoid re-listing.
  * @return array{success:bool,total_found:int,deleted:int,failed:int,errors:array<string>,message:string} Result array with deletion counts and message.
  */
-function r2mo_purge_r2_bucket(): array {
+function r2mo_purge_r2_bucket(?callable $on_batch = null, ?array $prelisted_keys = null): array {
 	try {
 		$start_time = microtime(true);
 
 		// List all objects.
-		$list_result = r2mo_list_r2_objects();
+		$list_result = $prelisted_keys === null ? r2mo_list_r2_objects() : [
+			'keys'  => $prelisted_keys,
+			'total' => count($prelisted_keys),
+			'error' => '',
+		];
 
 		if ($list_result['error'] !== '') {
 			return [
@@ -247,7 +270,7 @@ function r2mo_purge_r2_bucket(): array {
 		}
 
 		// Delete all objects.
-		$delete_result = r2mo_delete_r2_objects($keys);
+		$delete_result = r2mo_delete_r2_objects($keys, $on_batch);
 
 		$end_time     = microtime(true);
 		$execution_time = round($end_time - $start_time, 2);

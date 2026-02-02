@@ -36,13 +36,13 @@ final class Plugin {
 		require_once R2MO_PATH . 'includes/class-settings.php';
 		require_once R2MO_PATH . 'includes/class-r2-client.php';
 		require_once R2MO_PATH . 'includes/services/class-url-rewriter.php';
-		require_once R2MO_PATH . 'includes/features/webp-conversion.php';
 		require_once R2MO_PATH . 'includes/features/upload-new-media.php';
 		require_once R2MO_PATH . 'includes/features/rewrite-urls.php';
 		require_once R2MO_PATH . 'includes/features/sync-existing-media.php';
 		require_once R2MO_PATH . 'includes/features/delete-local-media.php';
 		require_once R2MO_PATH . 'includes/features/restore-local-media.php';
 		require_once R2MO_PATH . 'includes/features/purge-r2-bucket.php';
+		require_once R2MO_PATH . 'includes/features/reporting.php';
 		require_once R2MO_PATH . 'cli/class-sync-cli.php';
 	}
 

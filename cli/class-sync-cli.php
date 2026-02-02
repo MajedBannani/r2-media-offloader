@@ -9,11 +9,17 @@ declare(strict_types=1);
 
 namespace R2MO\CLI;
 
-use function R2MO\r2mo_offload_attachment_to_r2;
-use function R2MO\r2mo_delete_local_for_attachment;
-use function R2MO\r2mo_restore_local_for_attachment;
+use function R2MO\r2mo_sync_existing_batch;
+use function R2MO\r2mo_delete_local_batch;
+use function R2MO\r2mo_restore_local_batch;
 use function R2MO\r2mo_purge_r2_bucket;
+use function R2MO\r2mo_list_r2_objects;
+use function R2MO\r2mo_generate_sync_report;
+use function R2MO\r2mo_count_sync_existing_targets;
+use function R2MO\r2mo_count_delete_local_targets;
+use function R2MO\r2mo_count_restore_local_targets;
 use WP_CLI;
+use WP_CLI\Utils;
 
 if (! defined('ABSPATH')) {
 	exit;
@@ -58,6 +64,7 @@ if (defined('WP_CLI') && WP_CLI) {
 			WP_CLI::add_command('r2 delete-local', [__CLASS__, 'cmd_delete_local']);
 			WP_CLI::add_command('r2 restore-local', [__CLASS__, 'cmd_restore_local']);
 			WP_CLI::add_command('r2 purge', [__CLASS__, 'cmd_purge']);
+			WP_CLI::add_command('r2 report', [__CLASS__, 'cmd_report']);
 		}
 
 		/**
@@ -114,6 +121,7 @@ if (defined('WP_CLI') && WP_CLI) {
 		 * @param array $assoc_args Associative arguments.
 		 */
 		public static function cmd_sync_existing(array $args, array $assoc_args): void {
+			$progress = null;
 			try {
 				if (! self::sdk_guard_or_warn()) {
 					return;
@@ -123,33 +131,7 @@ if (defined('WP_CLI') && WP_CLI) {
 
 				WP_CLI::log('Starting CF R2 existing media sync...');
 
-				// Get total count first for logging and safety guard.
-				$count_query = new \WP_Query(
-					[
-						'post_type'      => 'attachment',
-						'post_status'    => 'inherit',
-						'posts_per_page' => -1,
-						'fields'         => 'ids',
-						// This meta_query is used intentionally for WP-CLI and batch processing.
-						// It does not run on frontend requests, and performance impact is acceptable.
-						'meta_query'     => [
-							'relation' => 'OR',
-							[
-								'key'     => '_r2_offloaded',
-								'compare' => 'NOT EXISTS',
-							],
-							[
-								'key'     => '_r2_offloaded',
-								'value'   => true,
-								'compare' => '!=',
-							],
-						],
-					]
-				);
-
-				$total_found = ! empty($count_query->posts) ? count($count_query->posts) : 0;
-				unset($count_query);
-
+				$total_found = r2mo_count_sync_existing_targets();
 				WP_CLI::log(sprintf('Found %d attachments to process.', $total_found));
 
 				if ($total_found === 0) {
@@ -157,104 +139,48 @@ if (defined('WP_CLI') && WP_CLI) {
 					return;
 				}
 
+				$progress = Utils\make_progress_bar('Syncing media to R2', $total_found);
+				$progress_ticks = 0;
+
 				$total_processed = 0;
 				$total_skipped   = 0;
 				$total_failed    = 0;
-				$total_handled   = 0;
-				$iteration       = 0;
 				$page            = 1;
 
-				while ($total_handled < $total_found) {
-					$query = new \WP_Query(
-						[
-							'post_type'      => 'attachment',
-							'post_status'    => 'inherit',
-							'posts_per_page' => $limit,
-							'paged'          => $page,
-							'fields'         => 'ids',
-							'orderby'        => 'ID',
-							'order'          => 'ASC',
-							// meta_query is used intentionally for CLI and batch processing.
-							// This code does not run on frontend requests.
-							'meta_query'     => [
-								'relation' => 'OR',
-								[
-									'key'     => '_r2_offloaded',
-									'compare' => 'NOT EXISTS',
-								],
-								[
-									'key'     => '_r2_offloaded',
-									'value'   => true,
-									'compare' => '!=',
-								],
-							],
-						]
+				while (true) {
+					$result = r2mo_sync_existing_batch($limit, $page);
+					$handled = $result['processed'] + $result['skipped'] + $result['failed'];
+
+					if ($handled === 0) {
+						break;
+					}
+
+					$total_processed += $result['processed'];
+					$total_skipped   += $result['skipped'];
+					$total_failed    += $result['failed'];
+
+					$tick = min($handled, max(0, $total_found - $progress_ticks));
+					if ($tick > 0) {
+						$progress->tick($tick);
+						$progress_ticks += $tick;
+					}
+
+					WP_CLI::log(
+						sprintf(
+							'Batch %d complete. Processed: %d, Skipped: %d, Failed: %d',
+							$page,
+							$result['processed'],
+							$result['skipped'],
+							$result['failed']
+						)
 					);
 
-					if (empty($query->posts)) {
-						unset($query);
-						break;
-					}
-
-					foreach ($query->posts as $attachment_id) {
-						$attachment_id = (int) $attachment_id;
-						$iteration++;
-						$total_handled++;
-
-						try {
-							$result = r2mo_offload_attachment_to_r2($attachment_id);
-						} catch (\Throwable $e) {
-							$total_failed++;
-							WP_CLI::warning(
-								sprintf(
-									'#%d - error during sync (msg=%s)',
-									$attachment_id,
-									$e->getMessage()
-								)
-							);
-							unset($result);
-							continue;
-						}
-
-						$message = sprintf(
-							'#%d - %s (%s)',
-							$attachment_id,
-							$result['status'],
-							$result['message']
-						);
-
-						if ($result['status'] === 'processed') {
-							$total_processed++;
-							WP_CLI::log($message);
-						} elseif ($result['status'] === 'failed') {
-							$total_failed++;
-							WP_CLI::warning($message);
-						} else {
-							$total_skipped++;
-							WP_CLI::log($message);
-						}
-
-						unset($result);
-
-						if ($iteration % 10 === 0) {
-							gc_collect_cycles();
-						}
-					}
-
-					unset($query);
-
 					$page++;
-
-					// Safety guard: prevent infinite loops.
-					if ($total_handled >= $total_found) {
-						break;
-					}
-
-					// Allow other processes a chance to run.
 					sleep(1);
 				}
 
-				WP_CLI::log(sprintf('Processed %d attachments. Command finished.', $total_handled));
+				$progress->finish();
+
 				WP_CLI::success(
 					sprintf(
 						'Sync complete. Processed: %d, Skipped: %d, Failed: %d',
@@ -264,6 +190,9 @@ if (defined('WP_CLI') && WP_CLI) {
 					)
 				);
 			} catch (\Throwable $e) {
+				if ($progress) {
+					$progress->finish();
+				}
 				WP_CLI::warning('CF R2 sync-existing command aborted safely: ' . $e->getMessage());
 			}
 		}
@@ -301,6 +230,7 @@ if (defined('WP_CLI') && WP_CLI) {
 		 * @param array $assoc_args Associative arguments.
 		 */
 		public static function cmd_delete_local(array $args, array $assoc_args): void {
+			$progress = null;
 			try {
 				if (! self::sdk_guard_or_warn()) {
 					return;
@@ -310,32 +240,7 @@ if (defined('WP_CLI') && WP_CLI) {
 
 				WP_CLI::log('Starting CF R2 safe local media cleanup...');
 
-				// Get total count first for logging and safety guard.
-				$count_query = new \WP_Query(
-					[
-						'post_type'      => 'attachment',
-						'post_status'    => 'inherit',
-						'posts_per_page' => -1,
-						'fields'         => 'ids',
-						// This meta_query is used intentionally for WP-CLI and batch processing.
-						// It does not run on frontend requests, and performance impact is acceptable.
-						'meta_query'     => [
-							'relation' => 'AND',
-							[
-								'key'   => '_r2_offloaded',
-								'value' => true,
-							],
-							[
-								'key'     => '_r2_local_deleted',
-								'compare' => 'NOT EXISTS',
-							],
-						],
-					]
-				);
-
-				$total_found = ! empty($count_query->posts) ? count($count_query->posts) : 0;
-				unset($count_query);
-
+				$total_found = r2mo_count_delete_local_targets();
 				WP_CLI::log(sprintf('Found %d attachments to process.', $total_found));
 
 				if ($total_found === 0) {
@@ -343,106 +248,46 @@ if (defined('WP_CLI') && WP_CLI) {
 					return;
 				}
 
+				$progress = Utils\make_progress_bar('Cleaning up local media', $total_found);
+				$progress_ticks = 0;
+
 				$total_processed = 0;
 				$total_deleted   = 0;
 				$total_skipped   = 0;
 				$total_failed    = 0;
-				$iteration       = 0;
-				$page            = 1;
 
-				while ($total_processed < $total_found) {
-					$query = new \WP_Query(
-						[
-							'post_type'      => 'attachment',
-							'post_status'    => 'inherit',
-							'posts_per_page' => $limit,
-							'paged'          => $page,
-							'fields'         => 'ids',
-							'orderby'        => 'ID',
-							'order'          => 'ASC',
-							// meta_query is used intentionally for CLI and batch processing.
-							// This code does not run on frontend requests.
-							'meta_query'     => [
-								'relation' => 'AND',
-								[
-									'key'   => '_r2_offloaded',
-									'value' => true,
-								],
-								[
-									'key'     => '_r2_local_deleted',
-									'compare' => 'NOT EXISTS',
-								],
-							],
-						]
-					);
-
-					if (empty($query->posts)) {
-						unset($query);
+				while (true) {
+					$result = r2mo_delete_local_batch($limit, 1);
+					if ($result['processed'] === 0) {
 						break;
 					}
 
-					foreach ($query->posts as $attachment_id) {
-						$attachment_id = (int) $attachment_id;
-						$total_processed++;
-						$iteration++;
+					$total_processed += $result['processed'];
+					$total_deleted   += $result['deleted'];
+					$total_skipped   += $result['skipped'];
+					$total_failed    += $result['failed'];
 
-						try {
-							$result = r2mo_delete_local_for_attachment($attachment_id);
-						} catch (\Throwable $e) {
-							$total_failed++;
-							WP_CLI::warning(
-								sprintf(
-									'#%d - error (msg=%s)',
-									$attachment_id,
-									$e->getMessage()
-								)
-							);
-							unset($result);
-							continue;
-						}
+					$tick = min($result['processed'], max(0, $total_found - $progress_ticks));
+					if ($tick > 0) {
+						$progress->tick($tick);
+						$progress_ticks += $tick;
+					}
 
-						$total_deleted += $result['deleted'];
-						$total_skipped += $result['skipped'];
-						$total_failed  += $result['failed'];
-
-						$message = sprintf(
-							'#%d - %s (deleted=%d, skipped=%d, failed=%d, msg=%s)',
-							$attachment_id,
-							$result['status'],
+					WP_CLI::log(
+						sprintf(
+							'Batch complete. Processed: %d, Deleted: %d, Skipped: %d, Failed: %d',
+							$result['processed'],
 							$result['deleted'],
 							$result['skipped'],
-							$result['failed'],
-							$result['message']
-						);
-
-						if ($result['status'] === 'deleted' || $result['status'] === 'partial') {
-							WP_CLI::log($message);
-						} elseif ($result['status'] === 'failed') {
-							WP_CLI::warning($message);
-						} else {
-							WP_CLI::log($message);
-						}
-
-						unset($result);
-
-						if ($iteration % 10 === 0) {
-							gc_collect_cycles();
-						}
-					}
-
-					unset($query);
-
-					$page++;
-
-					// Safety guard: prevent infinite loops.
-					if ($total_processed >= $total_found) {
-						break;
-					}
+							$result['failed']
+						)
+					);
 
 					sleep(1);
 				}
 
-				WP_CLI::log(sprintf('Processed %d attachments. Command finished.', $total_processed));
+				$progress->finish();
+
 				WP_CLI::success(
 					sprintf(
 						'Local cleanup complete. Attachments processed: %d, Files deleted: %d, Skipped: %d, Failed: %d',
@@ -453,6 +298,9 @@ if (defined('WP_CLI') && WP_CLI) {
 					)
 				);
 			} catch (\Throwable $e) {
+				if ($progress) {
+					$progress->finish();
+				}
 				WP_CLI::warning('CF R2 delete-local command aborted safely: ' . $e->getMessage());
 			}
 		}
@@ -491,6 +339,7 @@ if (defined('WP_CLI') && WP_CLI) {
 		 * @param array $assoc_args Associative arguments.
 		 */
 		public static function cmd_restore_local(array $args, array $assoc_args): void {
+			$progress = null;
 			try {
 				if (! self::sdk_guard_or_warn()) {
 					return;
@@ -500,27 +349,7 @@ if (defined('WP_CLI') && WP_CLI) {
 
 				WP_CLI::log('Starting CF R2 local media restore...');
 
-				// Get total count first for logging and safety guard.
-				$count_query = new \WP_Query(
-					[
-						'post_type'      => 'attachment',
-						'post_status'    => 'inherit',
-						'posts_per_page' => -1,
-						'fields'         => 'ids',
-						// This meta_query is used intentionally for WP-CLI and batch processing.
-						// It does not run on frontend requests, and performance impact is acceptable.
-						'meta_query'     => [
-							[
-								'key'   => '_r2_offloaded',
-								'value' => true,
-							],
-						],
-					]
-				);
-
-				$total_found = ! empty($count_query->posts) ? count($count_query->posts) : 0;
-				unset($count_query);
-
+				$total_found = r2mo_count_restore_local_targets();
 				WP_CLI::log(sprintf('Found %d attachments to process.', $total_found));
 
 				if ($total_found === 0) {
@@ -528,110 +357,46 @@ if (defined('WP_CLI') && WP_CLI) {
 					return;
 				}
 
+				$progress = Utils\make_progress_bar('Restoring local media', $total_found);
+				$progress_ticks = 0;
+
 				$total_processed = 0;
 				$total_restored  = 0;
 				$total_skipped   = 0;
 				$total_failed    = 0;
-				$iteration       = 0;
-				$page            = 1;
 
-				while ($total_processed < $total_found) {
-					$query = new \WP_Query(
-						[
-							'post_type'      => 'attachment',
-							'post_status'    => 'inherit',
-							'posts_per_page' => $limit,
-							'paged'          => $page,
-							'fields'         => 'ids',
-							'orderby'        => 'ID',
-							'order'          => 'ASC',
-							// meta_query is used intentionally for CLI and batch processing.
-							// This code does not run on frontend requests.
-							'meta_query'     => [
-								[
-									'key'   => '_r2_offloaded',
-									'value' => true,
-								],
-							],
-						]
+				while (true) {
+					$result = r2mo_restore_local_batch($limit, 1);
+					if ($result['processed'] === 0) {
+						break;
+					}
+
+					$total_processed += $result['processed'];
+					$total_restored  += $result['restored'];
+					$total_skipped   += $result['skipped'];
+					$total_failed    += $result['failed'];
+
+					$tick = min($result['processed'], max(0, $total_found - $progress_ticks));
+					if ($tick > 0) {
+						$progress->tick($tick);
+						$progress_ticks += $tick;
+					}
+
+					WP_CLI::log(
+						sprintf(
+							'Batch complete. Processed: %d, Restored: %d, Skipped: %d, Failed: %d',
+							$result['processed'],
+							$result['restored'],
+							$result['skipped'],
+							$result['failed']
+						)
 					);
-
-					if (empty($query->posts)) {
-						unset($query);
-						break;
-					}
-
-					foreach ($query->posts as $attachment_id) {
-						$attachment_id = (int) $attachment_id;
-						$total_processed++;
-						$iteration++;
-
-						try {
-							$result = r2mo_restore_local_for_attachment($attachment_id);
-						} catch (\Throwable $e) {
-							$total_failed++;
-							WP_CLI::log(
-								sprintf(
-									'#%d - error (msg=%s)',
-									$attachment_id,
-									$e->getMessage()
-								)
-							);
-							unset($result);
-							continue;
-						}
-
-						if (! is_array($result)) {
-							$total_failed++;
-							WP_CLI::log(
-								sprintf(
-									'#%d - invalid restore result',
-									$attachment_id
-								)
-							);
-							unset($result);
-							continue;
-						}
-
-						$total_restored += isset($result['restored']) ? (int) $result['restored'] : 0;
-						$total_skipped  += isset($result['skipped']) ? (int) $result['skipped'] : 0;
-						$total_failed   += isset($result['failed']) ? (int) $result['failed'] : 0;
-
-						$status  = isset($result['status']) ? (string) $result['status'] : 'unknown';
-						$message = isset($result['message']) ? (string) $result['message'] : '';
-
-						$line = sprintf(
-							'#%d - %s (restored=%d, skipped=%d, failed=%d, msg=%s)',
-							$attachment_id,
-							$status,
-							isset($result['restored']) ? (int) $result['restored'] : 0,
-							isset($result['skipped']) ? (int) $result['skipped'] : 0,
-							isset($result['failed']) ? (int) $result['failed'] : 0,
-							$message
-						);
-
-						WP_CLI::log($line);
-
-						unset($result);
-
-						if ($iteration % 10 === 0) {
-							gc_collect_cycles();
-						}
-					}
-
-					unset($query);
-
-					$page++;
-
-					// Safety guard: prevent infinite loops.
-					if ($total_processed >= $total_found) {
-						break;
-					}
 
 					sleep(1);
 				}
 
-				WP_CLI::log(sprintf('Processed %d attachments. Command finished.', $total_processed));
+				$progress->finish();
+
 				WP_CLI::success(
 					sprintf(
 						'Local restore complete. Attachments processed: %d, Files restored: %d, Skipped: %d, Failed: %d',
@@ -642,6 +407,9 @@ if (defined('WP_CLI') && WP_CLI) {
 					)
 				);
 			} catch (\Throwable $e) {
+				if ($progress) {
+					$progress->finish();
+				}
 				WP_CLI::warning('CF R2 restore-local command aborted safely: ' . $e->getMessage());
 			}
 		}
@@ -676,6 +444,7 @@ if (defined('WP_CLI') && WP_CLI) {
 		 * @param array $assoc_args Associative arguments.
 		 */
 		public static function cmd_purge(array $args, array $assoc_args): void {
+			$progress = null;
 			try {
 				if (! self::sdk_guard_or_warn()) {
 					return;
@@ -685,7 +454,7 @@ if (defined('WP_CLI') && WP_CLI) {
 				WP_CLI::log('This action cannot be undone.');
 
 				// List objects first to show what will be deleted.
-				$list_result = \R2MO\r2mo_list_r2_objects();
+				$list_result = r2mo_list_r2_objects();
 
 				if ($list_result['error'] !== '') {
 					WP_CLI::error('Failed to list R2 objects: ' . $list_result['error']);
@@ -713,9 +482,22 @@ if (defined('WP_CLI') && WP_CLI) {
 					return;
 				}
 
+				$progress = Utils\make_progress_bar('Purging R2 bucket', $total_found);
+				$progress_ticks = 0;
+
+				$callback = static function (int $batch_count, int $deleted, int $failed) use (&$progress, &$progress_ticks, $total_found): void {
+					$tick = min($batch_count, max(0, $total_found - $progress_ticks));
+					if ($tick > 0) {
+						$progress->tick($tick);
+						$progress_ticks += $tick;
+					}
+				};
+
 				WP_CLI::log('Starting purge operation...');
 
-				$result = r2mo_purge_r2_bucket();
+				$result = r2mo_purge_r2_bucket($callback, $list_result['keys']);
+
+				$progress->finish();
 
 				if ($result['success']) {
 					WP_CLI::success($result['message']);
@@ -729,7 +511,59 @@ if (defined('WP_CLI') && WP_CLI) {
 					}
 				}
 			} catch (\Throwable $e) {
+				if ($progress) {
+					$progress->finish();
+				}
 				WP_CLI::warning('CF R2 purge command aborted safely: ' . $e->getMessage());
+			}
+		}
+
+		/**
+		 * Generate a sync report (counts only).
+		 *
+		 * ## EXAMPLES
+		 *
+		 *     # Show current sync report
+		 *     wp r2 report
+		 *
+		 * @since 1.0.0
+		 * @param array $args       Positional arguments.
+		 * @param array $assoc_args Associative arguments.
+		 */
+		public static function cmd_report(array $args, array $assoc_args): void {
+			$progress = null;
+			try {
+				if (! self::sdk_guard_or_warn()) {
+					return;
+				}
+
+				$progress = Utils\make_progress_bar('Generating sync report', 3);
+				$report = r2mo_generate_sync_report(static function () use ($progress): void {
+					$progress->tick();
+				});
+				$progress->finish();
+
+				if (! empty($report['errors'])) {
+					foreach ($report['errors'] as $error) {
+						WP_CLI::warning((string) $error);
+					}
+				}
+
+				$items = [
+					['metric' => 'Total attachments', 'value' => (int) $report['total_attachments']],
+					['metric' => 'Total offloaded', 'value' => (int) $report['total_offloaded']],
+					['metric' => 'Total R2 objects', 'value' => (int) $report['total_r2_objects']],
+					['metric' => 'In sync', 'value' => (int) $report['in_sync']],
+					['metric' => 'Missing in R2', 'value' => (int) $report['missing_in_r2']],
+					['metric' => 'Orphaned in R2', 'value' => (int) $report['orphaned_in_r2']],
+				];
+
+				Utils\format_items('table', $items, ['metric', 'value']);
+			} catch (\Throwable $e) {
+				if ($progress) {
+					$progress->finish();
+				}
+				WP_CLI::warning('CF R2 report command aborted safely: ' . $e->getMessage());
 			}
 		}
 

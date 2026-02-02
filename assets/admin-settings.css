@@ -96,6 +96,81 @@
 	margin-block-end: 0;
 }
 
+.media-offloader-settings .r2mo-status {
+	display: none;
+	background: #ffffff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	padding-block: 12px;
+	padding-inline: 16px;
+	margin-block-end: 16px;
+}
+
+.media-offloader-settings .r2mo-status.is-visible {
+	display: block;
+}
+
+.media-offloader-settings .r2mo-status-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	text-align: start;
+}
+
+.media-offloader-settings .r2mo-status-spinner {
+	float: none;
+	margin: 0;
+}
+
+.media-offloader-settings .r2mo-status-text {
+	font-weight: 600;
+}
+
+.media-offloader-settings .r2mo-status-bar {
+	height: 4px;
+	border-radius: 999px;
+	background: #e5e5e5;
+	margin-block-start: 8px;
+	overflow: hidden;
+	position: relative;
+}
+
+.media-offloader-settings .r2mo-status-bar::after {
+	content: '';
+	display: block;
+	height: 100%;
+	width: 40%;
+	background: #2271b1;
+	animation: none;
+}
+
+.media-offloader-settings .r2mo-status.is-running .r2mo-status-bar::after {
+	animation: r2mo-progress 1.2s linear infinite;
+}
+
+.media-offloader-settings .r2mo-status.is-complete .r2mo-status-bar::after {
+	animation: none;
+	width: 100%;
+	transform: none;
+}
+
+.media-offloader-settings .r2mo-status.is-success .r2mo-status-bar::after {
+	background: #2a8a4b;
+}
+
+.media-offloader-settings .r2mo-status.is-error .r2mo-status-bar::after {
+	background: #b32d2e;
+}
+
+@keyframes r2mo-progress {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(250%);
+	}
+}
+
 /* Danger Zone section */
 .media-offloader-settings .r2mo-danger-zone {
 	border: 1px solid #dcdcde;
@@ -103,6 +178,20 @@
 	margin-block-start: 32px;
 	padding-block: 20px;
 	padding-inline: 24px;
+}
+
+.media-offloader-settings .r2mo-danger-group {
+	margin-block-start: 16px;
+}
+
+.media-offloader-settings .r2mo-danger-group:first-of-type {
+	margin-block-start: 0;
+}
+
+.media-offloader-settings .r2mo-danger-group h3 {
+	margin-block-start: 0;
+	margin-block-end: 8px;
+	font-weight: 600;
 }
 
 .media-offloader-settings .r2mo-danger-zone h2 {

@@ -41,14 +41,13 @@ add_filter(
 			return $url;
 		}
 
-		// Fallback to original offloaded version.
-		$offloaded = get_post_meta($attachment_id, '_r2_offloaded', true);
-		if (! $offloaded) {
-			return $url;
-		}
-
 		$key = get_post_meta($attachment_id, '_r2_key', true);
 		if (! is_string($key) || $key === '') {
+			$offloaded = get_post_meta($attachment_id, '_r2_offloaded', true);
+			if (! $offloaded) {
+				return $url;
+			}
+
 			return $url;
 		}
 

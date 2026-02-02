@@ -42,16 +42,6 @@ function r2mo_offload_attachment_to_r2(int $attachment_id): array {
 		];
 	}
 
-	$offloaded = get_post_meta($attachment_id, '_r2_offloaded', true);
-	$existing  = get_post_meta($attachment_id, '_r2_key', true);
-	if ($offloaded && is_string($existing) && $existing !== '') {
-		return [
-			'status'  => 'skipped',
-			'message' => 'Already offloaded.',
-			'key'     => (string) $existing,
-		];
-	}
-
 	$file = get_attached_file($attachment_id);
 	if (! is_string($file) || $file === '' || ! file_exists($file) || ! is_readable($file)) {
 		return [
@@ -91,6 +81,39 @@ function r2mo_offload_attachment_to_r2(int $attachment_id): array {
 	$mime_type = get_post_mime_type($attachment_id) ?: '';
 
 	try {
+		// Check remote existence before uploading to avoid duplicates.
+		try {
+			R2_Client::instance()->client()->headObject(
+				[
+					'Bucket' => $bucket,
+					'Key'    => $key,
+				]
+			);
+
+			update_post_meta($attachment_id, '_r2_offloaded', true);
+			update_post_meta($attachment_id, '_r2_key', $key);
+			update_post_meta($attachment_id, '_r2_object_key', $key);
+
+			$public_url = r2mo_public_url_for_key($key);
+			if ($public_url !== '') {
+				update_post_meta($attachment_id, '_r2_public_url', $public_url);
+			}
+
+			return [
+				'status'  => 'skipped',
+				'message' => 'Already offloaded (verified).',
+				'key'     => $key,
+			];
+		} catch (\Throwable $e) {
+			if (! r2mo_is_missing_object_error($e)) {
+				return [
+					'status'  => 'failed',
+					'message' => 'Unable to verify R2 object: ' . r2mo_get_aws_error_message($e),
+					'key'     => '',
+				];
+			}
+		}
+
 		global $wp_filesystem;
 		if (empty($wp_filesystem)) {
 			require_once ABSPATH . '/wp-admin/includes/file.php';
@@ -127,6 +150,12 @@ function r2mo_offload_attachment_to_r2(int $attachment_id): array {
 
 		update_post_meta($attachment_id, '_r2_offloaded', true);
 		update_post_meta($attachment_id, '_r2_key', $key);
+		update_post_meta($attachment_id, '_r2_object_key', $key);
+
+		$public_url = r2mo_public_url_for_key($key);
+		if ($public_url !== '') {
+			update_post_meta($attachment_id, '_r2_public_url', $public_url);
+		}
 
 		$status  = 'processed';
 		$message = 'Offloaded successfully.';
@@ -157,9 +186,10 @@ function r2mo_offload_attachment_to_r2(int $attachment_id): array {
  * Process a batch of existing attachments that are not yet offloaded.
  *
  * @param int $limit Number of attachments to process in this batch.
+ * @param int $page  Page number (1-based).
  * @return array{processed:int,skipped:int,failed:int,total:int}
  */
-function r2mo_sync_existing_batch(int $limit = 50): array {
+function r2mo_sync_existing_batch(int $limit = 50, int $page = 1): array {
 	$args = [
 		'post_type'      => 'attachment',
 		'post_status'    => 'inherit',
@@ -167,20 +197,7 @@ function r2mo_sync_existing_batch(int $limit = 50): array {
 		'fields'         => 'ids',
 		'orderby'        => 'ID',
 		'order'          => 'ASC',
-		// This meta_query is used intentionally for WP-CLI and batch processing.
-		// It does not run on frontend requests, and performance impact is acceptable.
-		'meta_query'     => [
-			'relation' => 'OR',
-			[
-				'key'     => '_r2_offloaded',
-				'compare' => 'NOT EXISTS',
-			],
-			[
-				'key'     => '_r2_offloaded',
-				'value'   => true,
-				'compare' => '!=',
-			],
-		],
+		'paged'          => max(1, $page),
 	];
 
 	$query = new \WP_Query($args);
@@ -207,17 +224,9 @@ function r2mo_sync_existing_batch(int $limit = 50): array {
 	}
 
 	// Remaining count (rough estimate) for information purposes.
-	$remaining_query = new \WP_Query(
-		[
-			'post_type'      => 'attachment',
-			'post_status'    => 'inherit',
-			'posts_per_page' => 1,
-			'fields'         => 'ids',
-			'meta_query'     => $args['meta_query'],
-		]
-	);
-
-	$total_remaining = (int) $remaining_query->found_posts;
+	$counts = wp_count_posts('attachment');
+	$total_attachments = isset($counts->inherit) ? (int) $counts->inherit : 0;
+	$total_remaining = max(0, $total_attachments - ($processed + $skipped + $failed));
 
 	return [
 		'processed' => $processed,
@@ -227,3 +236,10 @@ function r2mo_sync_existing_batch(int $limit = 50): array {
 	];
 }
 
+/**
+ * Count total attachments eligible for sync.
+ */
+function r2mo_count_sync_existing_targets(): int {
+	$counts = wp_count_posts('attachment');
+	return isset($counts->inherit) ? (int) $counts->inherit : 0;
+}

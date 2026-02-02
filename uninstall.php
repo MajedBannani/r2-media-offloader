@@ -32,6 +32,7 @@ function r2mo_uninstall_cleanup_site(): void {
 	$transient_keys = [
 		'r2mo_github_release',
 		'r2mo_github_release_notice',
+		'r2mo_sync_report',
 	];
 
 	foreach ($transient_keys as $transient_key) {

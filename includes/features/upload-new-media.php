@@ -197,6 +197,12 @@ add_action(
 
 		update_post_meta($attachment_id, '_r2_offloaded', true);
 		update_post_meta($attachment_id, '_r2_key', $key);
+		update_post_meta($attachment_id, '_r2_object_key', $key);
+
+		$public_url = r2mo_public_url_for_key($key);
+		if ($public_url !== '') {
+			update_post_meta($attachment_id, '_r2_public_url', $public_url);
+		}
 	},
 	20,
 	1

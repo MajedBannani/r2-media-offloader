@@ -205,9 +205,10 @@ function r2mo_delete_local_for_attachment(int $attachment_id): array {
  * Process a batch of attachments for safe local deletion.
  *
  * @param int $limit Number of attachments to process.
+ * @param int $page  Page number (1-based).
  * @return array{processed:int,deleted:int,skipped:int,failed:int}
  */
-function r2mo_delete_local_batch(int $limit = 50): array {
+function r2mo_delete_local_batch(int $limit = 50, int $page = 1): array {
 	$args = [
 		'post_type'      => 'attachment',
 		'post_status'    => 'inherit',
@@ -215,6 +216,7 @@ function r2mo_delete_local_batch(int $limit = 50): array {
 		'fields'         => 'ids',
 		'orderby'        => 'ID',
 		'order'          => 'ASC',
+		'paged'          => max(1, $page),
 		// This meta_query is used intentionally for WP-CLI and batch processing.
 		// It does not run on frontend requests, and performance impact is acceptable.
 		'meta_query'     => [
@@ -262,3 +264,26 @@ function r2mo_delete_local_batch(int $limit = 50): array {
 	];
 }
 
+/**
+ * Count attachments eligible for local deletion.
+ */
+function r2mo_count_delete_local_targets(): int {
+	global $wpdb;
+
+	$query = $wpdb->prepare(
+		"SELECT COUNT(DISTINCT pm.post_id)
+		 FROM {$wpdb->postmeta} pm
+		 INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+		 LEFT JOIN {$wpdb->postmeta} pm2
+			ON pm2.post_id = pm.post_id AND pm2.meta_key = %s
+		 WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value IN (%s, %s)
+		 AND pm2.post_id IS NULL",
+		'_r2_local_deleted',
+		'attachment',
+		'_r2_offloaded',
+		'1',
+		'true'
+	);
+
+	return (int) $wpdb->get_var($query);
+}

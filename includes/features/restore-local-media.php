@@ -222,6 +222,10 @@ function r2mo_restore_local_for_attachment(int $attachment_id): array {
 		$status  = $restored > 0 && $failed === 0 ? 'restored' : ($restored > 0 ? 'partial' : 'skipped');
 		$message = $status === 'restored' ? 'All missing files restored.' : ($status === 'partial' ? 'Some files restored; some failed.' : 'No files restored.');
 
+		if ($restored > 0) {
+			r2mo_clear_offload_meta_for_attachment($attachment_id);
+		}
+
 		return [
 			'status'   => $status,
 			'message'  => $message,
@@ -244,9 +248,10 @@ function r2mo_restore_local_for_attachment(int $attachment_id): array {
  * Process a batch of attachments for restoring local files.
  *
  * @param int $limit Number of attachments to process.
+ * @param int $page  Page number (1-based).
  * @return array{processed:int,restored:int,skipped:int,failed:int}
  */
-function r2mo_restore_local_batch(int $limit = 50): array {
+function r2mo_restore_local_batch(int $limit = 50, int $page = 1): array {
 	$args = [
 		'post_type'      => 'attachment',
 		'post_status'    => 'inherit',
@@ -254,6 +259,7 @@ function r2mo_restore_local_batch(int $limit = 50): array {
 		'fields'         => 'ids',
 		'orderby'        => 'ID',
 		'order'          => 'ASC',
+		'paged'          => max(1, $page),
 		// This meta_query is used intentionally for WP-CLI and batch processing.
 		// It does not run on frontend requests, and performance impact is acceptable.
 		'meta_query'     => [
@@ -297,3 +303,22 @@ function r2mo_restore_local_batch(int $limit = 50): array {
 	];
 }
 
+/**
+ * Count attachments eligible for restore.
+ */
+function r2mo_count_restore_local_targets(): int {
+	global $wpdb;
+
+	$query = $wpdb->prepare(
+		"SELECT COUNT(DISTINCT pm.post_id)
+		 FROM {$wpdb->postmeta} pm
+		 INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+		 WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value IN (%s, %s)",
+		'attachment',
+		'_r2_offloaded',
+		'1',
+		'true'
+	);
+
+	return (int) $wpdb->get_var($query);
+}

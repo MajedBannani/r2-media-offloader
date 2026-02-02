@@ -34,17 +34,20 @@ final class Settings_Page {
 	private const RESTORE_FAILED_QS = 'r2mo_restore_failed';
 	private const PURGE_NOTICE_QS = 'r2mo_purge_notice';
 	private const PURGE_MSG_QS = 'r2mo_purge_msg';
+	private const REPORT_TRANSIENT = 'r2mo_sync_report';
 	private const SETTINGS_GROUP = 'r2mo_settings_group';
 
 	public static function init(): void {
 		add_action('admin_menu', [__CLASS__, 'register_menu']);
 		add_action('admin_init', [__CLASS__, 'register_fields']);
 		add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_styles']);
+		add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_scripts']);
 		add_action('admin_post_r2mo_test_connection', [__CLASS__, 'handle_test_connection']);
 		add_action('admin_post_r2mo_sync_existing', [__CLASS__, 'handle_sync_existing']);
 		add_action('admin_post_r2mo_delete_local', [__CLASS__, 'handle_delete_local']);
 		add_action('admin_post_r2mo_restore_local', [__CLASS__, 'handle_restore_local']);
 		add_action('admin_post_r2mo_purge_bucket', [__CLASS__, 'handle_purge_bucket']);
+		add_action('admin_post_r2mo_generate_report', [__CLASS__, 'handle_generate_report']);
 		// Preserve existing secret_key if password field is left blank (password input is intentionally empty on reload).
 		add_filter('pre_update_option_' . Settings::OPTION_KEY, [__CLASS__, 'preserve_secret_key'], 10, 2);
 	}
@@ -74,6 +77,25 @@ final class Settings_Page {
 			R2MO_URL . 'assets/admin-settings.css',
 			[],
 			R2MO_VERSION
+		);
+	}
+
+	/**
+	 * Enqueue admin scripts for settings page.
+	 *
+	 * @param string $hook Current admin page hook.
+	 */
+	public static function enqueue_scripts(string $hook): void {
+		if ($hook !== 'settings_page_' . self::MENU_SLUG) {
+			return;
+		}
+
+		wp_enqueue_script(
+			'r2mo-admin-settings',
+			R2MO_URL . 'assets/admin-settings.js',
+			[],
+			R2MO_VERSION,
+			true
 		);
 	}
 
@@ -195,6 +217,33 @@ final class Settings_Page {
 		echo '<div class="wrap media-offloader-settings">';
 		echo '<h1>' . esc_html__('Media Offloader for CF R2', 'media-offloader-for-cf-r2') . '</h1>';
 
+		$status_payload = self::get_status_payload(
+			$notice_type,
+			$notice_msg,
+			$sync_notice,
+			$sync_processed,
+			$sync_skipped,
+			$sync_failed,
+			$cleanup_notice,
+			$cleanup_deleted,
+			$cleanup_skipped,
+			$cleanup_failed,
+			$restore_notice,
+			$restore_restored,
+			$restore_skipped,
+			$restore_failed,
+			$purge_notice,
+			$purge_msg
+		);
+
+		echo '<div class="r2mo-status" id="r2mo-status" data-status="' . esc_attr($status_payload['type']) . '" data-message="' . esc_attr($status_payload['message']) . '">';
+		echo '<div class="r2mo-status-header">';
+		echo '<span class="spinner r2mo-status-spinner"></span>';
+		echo '<span class="r2mo-status-text" id="r2mo-status-text"></span>';
+		echo '</div>';
+		echo '<div class="r2mo-status-bar" aria-hidden="true"></div>';
+		echo '</div>';
+
 		if ($notice_type === 'success') {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($notice_msg !== '' ? $notice_msg : __('Connection successful.', 'media-offloader-for-cf-r2')) . '</p></div>';
 		} elseif ($notice_type === 'error') {
@@ -253,34 +302,68 @@ final class Settings_Page {
 		submit_button(__('Save Changes', 'media-offloader-for-cf-r2'));
 		echo '</form>';
 
-		// Action buttons section.
-		echo '<div class="r2mo-actions-group r2mo-section-separator">';
 		// Test Connection button (separate action, does not save settings).
-		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="r2mo-action-form">';
+		echo '<div class="r2mo-actions-group r2mo-section-separator">';
+		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="r2mo-action-form" data-r2mo-action-label="' . esc_attr__('Testing connection…', 'media-offloader-for-cf-r2') . '" data-r2mo-processing-label="' . esc_attr__('Testing…', 'media-offloader-for-cf-r2') . '">';
 		echo '<input type="hidden" name="action" value="r2mo_test_connection" />';
 		wp_nonce_field('r2mo_test_connection', '_r2mo_nonce');
 		submit_button(__('Test Connection', 'media-offloader-for-cf-r2'), 'secondary', 'submit', false);
 		echo '<p class="description r2mo-action-description">' . esc_html(self::get_action_description('r2mo_test_connection')) . '</p>';
 		echo '</form>';
+		echo '</div>';
 
+		// Sync report section.
+		echo '<div class="r2mo-actions-group r2mo-section-separator">';
+		echo '<h2>' . esc_html__('Sync Report', 'media-offloader-for-cf-r2') . '</h2>';
+		echo '<p class="description">' . esc_html__('Generate a report that compares WordPress attachments with objects in R2.', 'media-offloader-for-cf-r2') . '</p>';
+		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="r2mo-action-form" data-r2mo-action-label="' . esc_attr__('Generating report…', 'media-offloader-for-cf-r2') . '" data-r2mo-processing-label="' . esc_attr__('Generating…', 'media-offloader-for-cf-r2') . '">';
+		echo '<input type="hidden" name="action" value="r2mo_generate_report" />';
+		wp_nonce_field('r2mo_generate_report', '_r2mo_report_nonce');
+		submit_button(__('Generate Report', 'media-offloader-for-cf-r2'), 'secondary', 'submit', false);
+		echo '<p class="description r2mo-action-description">' . esc_html(self::get_action_description('r2mo_generate_report')) . '</p>';
+		echo '</form>';
+
+		$report = get_transient(self::REPORT_TRANSIENT);
+		if (is_array($report)) {
+			$generated = isset($report['generated_at']) ? (int) $report['generated_at'] : 0;
+			if ($generated > 0) {
+				echo '<p class="description">' . esc_html(sprintf(__('Last generated: %s', 'media-offloader-for-cf-r2'), gmdate('Y-m-d H:i:s', $generated) . ' UTC')) . '</p>';
+			}
+
+			if (! empty($report['errors']) && is_array($report['errors'])) {
+				foreach ($report['errors'] as $error) {
+					echo '<p class="description">' . esc_html((string) $error) . '</p>';
+				}
+			}
+
+			echo '<table class="widefat striped">';
+			echo '<tbody>';
+			echo '<tr><td>' . esc_html__('Total attachments', 'media-offloader-for-cf-r2') . '</td><td>' . esc_html((string) ($report['total_attachments'] ?? 0)) . '</td></tr>';
+			echo '<tr><td>' . esc_html__('Total offloaded (meta)', 'media-offloader-for-cf-r2') . '</td><td>' . esc_html((string) ($report['total_offloaded'] ?? 0)) . '</td></tr>';
+			echo '<tr><td>' . esc_html__('Total R2 objects', 'media-offloader-for-cf-r2') . '</td><td>' . esc_html((string) ($report['total_r2_objects'] ?? 0)) . '</td></tr>';
+			echo '<tr><td>' . esc_html__('In sync', 'media-offloader-for-cf-r2') . '</td><td>' . esc_html((string) ($report['in_sync'] ?? 0)) . '</td></tr>';
+			echo '<tr><td>' . esc_html__('Missing in R2', 'media-offloader-for-cf-r2') . '</td><td>' . esc_html((string) ($report['missing_in_r2'] ?? 0)) . '</td></tr>';
+			echo '<tr><td>' . esc_html__('Orphaned in R2', 'media-offloader-for-cf-r2') . '</td><td>' . esc_html((string) ($report['orphaned_in_r2'] ?? 0)) . '</td></tr>';
+			echo '</tbody>';
+			echo '</table>';
+		} else {
+			echo '<p class="description">' . esc_html__('No report generated yet.', 'media-offloader-for-cf-r2') . '</p>';
+		}
+
+		echo '</div>';
+
+		// Action buttons section.
+		echo '<div class="r2mo-actions-group r2mo-section-separator">';
 		// Sync Existing Media button (processes one batch per request).
-		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="r2mo-action-form">';
+		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="r2mo-action-form" data-r2mo-action-label="' . esc_attr__('Syncing media to R2…', 'media-offloader-for-cf-r2') . '" data-r2mo-processing-label="' . esc_attr__('Syncing…', 'media-offloader-for-cf-r2') . '">';
 		echo '<input type="hidden" name="action" value="r2mo_sync_existing" />';
 		wp_nonce_field('r2mo_sync_existing', '_r2mo_sync_nonce');
 		submit_button(__('Sync Existing Media to R2', 'media-offloader-for-cf-r2'), 'secondary', 'submit', false);
 		echo '<p class="description r2mo-action-description">' . esc_html(self::get_action_description('r2mo_sync_existing')) . '</p>';
 		echo '</form>';
 
-		// Safe local media cleanup button (processes one batch per request).
-		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="r2mo-action-form">';
-		echo '<input type="hidden" name="action" value="r2mo_delete_local" />';
-		wp_nonce_field('r2mo_delete_local', '_r2mo_delete_local_nonce');
-		submit_button(__('Delete Local Media (Safe Cleanup)', 'media-offloader-for-cf-r2'), 'delete', 'submit', false);
-		echo '<p class="description r2mo-action-description">' . esc_html(self::get_action_description('r2mo_delete_local')) . '</p>';
-		echo '</form>';
-
 		// Restore local media from R2 (processes one batch per request).
-		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="r2mo-action-form">';
+		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="r2mo-action-form" data-r2mo-action-label="' . esc_attr__('Restoring media from R2…', 'media-offloader-for-cf-r2') . '" data-r2mo-processing-label="' . esc_attr__('Restoring…', 'media-offloader-for-cf-r2') . '">';
 		echo '<input type="hidden" name="action" value="r2mo_restore_local" />';
 		wp_nonce_field('r2mo_restore_local', '_r2mo_restore_local_nonce');
 		submit_button(__('Restore Local Media from R2', 'media-offloader-for-cf-r2'), 'secondary', 'submit', false);
@@ -292,8 +375,22 @@ final class Settings_Page {
 		// Purge R2 bucket (requires confirmation).
 		echo '<div class="r2mo-danger-zone">';
 		echo '<h2>' . esc_html__('⚠️ Danger Zone', 'media-offloader-for-cf-r2') . '</h2>';
+
+		echo '<div class="r2mo-danger-group">';
+		echo '<h3>' . esc_html__('Safe Cleanup', 'media-offloader-for-cf-r2') . '</h3>';
+		// Safe local media cleanup button (processes one batch per request).
+		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="r2mo-action-form" data-r2mo-action-label="' . esc_attr__('Deleting local media…', 'media-offloader-for-cf-r2') . '" data-r2mo-processing-label="' . esc_attr__('Deleting…', 'media-offloader-for-cf-r2') . '">';
+		echo '<input type="hidden" name="action" value="r2mo_delete_local" />';
+		wp_nonce_field('r2mo_delete_local', '_r2mo_delete_local_nonce');
+		submit_button(__('Delete Local Media (Safe Cleanup)', 'media-offloader-for-cf-r2'), 'secondary', 'submit', false);
+		echo '<p class="description r2mo-action-description">' . esc_html__('This will remove local media files only if they already exist in CF R2. If a file is missing in R2, it will NOT be deleted locally.', 'media-offloader-for-cf-r2') . '</p>';
+		echo '</form>';
+		echo '</div>';
+
+		echo '<div class="r2mo-danger-group">';
+		echo '<h3>' . esc_html__('Irreversible Actions', 'media-offloader-for-cf-r2') . '</h3>';
 		echo '<p class="description">' . esc_html__('This will permanently delete ALL objects in your R2 bucket (or under the configured path prefix). This action cannot be undone.', 'media-offloader-for-cf-r2') . '</p>';
-		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+		echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="r2mo-action-form" data-r2mo-action-label="' . esc_attr__('Purging R2 bucket…', 'media-offloader-for-cf-r2') . '" data-r2mo-processing-label="' . esc_attr__('Purging…', 'media-offloader-for-cf-r2') . '">';
 		echo '<input type="hidden" name="action" value="r2mo_purge_bucket" />';
 		wp_nonce_field('r2mo_purge_bucket', '_r2mo_purge_nonce');
 		echo '<p>';
@@ -303,6 +400,7 @@ final class Settings_Page {
 		submit_button(__('⚠️ Purge CF R2 Bucket', 'media-offloader-for-cf-r2'), 'delete', 'submit', false);
 		echo '<p class="description r2mo-action-description">' . esc_html(self::get_action_description('r2mo_purge_bucket')) . '</p>';
 		echo '</form>';
+		echo '</div>';
 		echo '</div>';
 
 		echo '<div class="r2mo-support-box">';
@@ -447,6 +545,20 @@ final class Settings_Page {
 		exit;
 	}
 
+	public static function handle_generate_report(): void {
+		if (! current_user_can('manage_options')) {
+			wp_die(esc_html__('You do not have permission to perform this action.', 'media-offloader-for-cf-r2'));
+		}
+
+		check_admin_referer('r2mo_generate_report', '_r2mo_report_nonce');
+
+		$report = \R2MO\r2mo_generate_sync_report();
+		set_transient(self::REPORT_TRANSIENT, $report, 15 * MINUTE_IN_SECONDS);
+
+		wp_safe_redirect(add_query_arg(['page' => self::MENU_SLUG], admin_url('options-general.php')));
+		exit;
+	}
+
 
 	/**
 	 * Preserve secret_key if incoming value is blank.
@@ -563,6 +675,10 @@ final class Settings_Page {
 				'en' => __('Deletes all objects from the R2 bucket. This action is irreversible.', 'media-offloader-for-cf-r2'),
 				'ar' => __('يحذف جميع الملفات داخل الـ Bucket. هذا الإجراء لا يمكن التراجع عنه.', 'media-offloader-for-cf-r2'),
 			],
+			'r2mo_generate_report' => [
+				'en' => __('Generates a sync report with counts only.', 'media-offloader-for-cf-r2'),
+				'ar' => __('ينشئ تقرير مزامنة بالأعداد فقط.', 'media-offloader-for-cf-r2'),
+			],
 		];
 
 		if (! isset($descriptions[$action])) {
@@ -570,6 +686,89 @@ final class Settings_Page {
 		}
 
 		return $is_ar ? $descriptions[$action]['ar'] : $descriptions[$action]['en'];
+	}
+
+	/**
+	 * Build status payload for the status area.
+	 *
+	 * @return array{type:string,message:string}
+	 */
+	private static function get_status_payload(
+		string $notice_type,
+		string $notice_msg,
+		string $sync_notice,
+		int $sync_processed,
+		int $sync_skipped,
+		int $sync_failed,
+		string $cleanup_notice,
+		int $cleanup_deleted,
+		int $cleanup_skipped,
+		int $cleanup_failed,
+		string $restore_notice,
+		int $restore_restored,
+		int $restore_skipped,
+		int $restore_failed,
+		string $purge_notice,
+		string $purge_msg
+	): array {
+		if ($notice_type === 'success') {
+			return [
+				'type'    => 'success',
+				'message' => $notice_msg !== '' ? $notice_msg : __('Connection successful.', 'media-offloader-for-cf-r2'),
+			];
+		}
+
+		if ($notice_type === 'error') {
+			return [
+				'type'    => 'error',
+				'message' => $notice_msg !== '' ? $notice_msg : __('Connection failed.', 'media-offloader-for-cf-r2'),
+			];
+		}
+
+		if ($sync_notice === 'done') {
+			$text = sprintf(
+				/* translators: 1: processed count, 2: skipped count, 3: failed count */
+				__('Sync batch complete. Processed: %1$d, Skipped: %2$d, Failed: %3$d.', 'media-offloader-for-cf-r2'),
+				$sync_processed,
+				$sync_skipped,
+				$sync_failed
+			);
+			return ['type' => 'info', 'message' => $text];
+		}
+
+		if ($cleanup_notice === 'done') {
+			$text = sprintf(
+				/* translators: 1: deleted count, 2: skipped count, 3: failed count */
+				__('Cleanup batch complete. Deleted: %1$d, Skipped: %2$d, Failed: %3$d.', 'media-offloader-for-cf-r2'),
+				$cleanup_deleted,
+				$cleanup_skipped,
+				$cleanup_failed
+			);
+			return ['type' => 'warning', 'message' => $text];
+		}
+
+		if ($restore_notice === 'done') {
+			$text = sprintf(
+				/* translators: 1: restored count, 2: skipped count, 3: failed count */
+				__('Restore batch complete. Restored: %1$d, Skipped: %2$d, Failed: %3$d.', 'media-offloader-for-cf-r2'),
+				$restore_restored,
+				$restore_skipped,
+				$restore_failed
+			);
+			return ['type' => 'info', 'message' => $text];
+		}
+
+		if ($purge_notice === 'done') {
+			$text = $purge_msg !== '' ? $purge_msg : __('R2 bucket purge complete.', 'media-offloader-for-cf-r2');
+			return ['type' => 'warning', 'message' => $text];
+		}
+
+		if ($purge_notice === 'error') {
+			$text = $purge_msg !== '' ? $purge_msg : __('R2 bucket purge failed.', 'media-offloader-for-cf-r2');
+			return ['type' => 'error', 'message' => $text];
+		}
+
+		return ['type' => '', 'message' => ''];
 	}
 }
 
